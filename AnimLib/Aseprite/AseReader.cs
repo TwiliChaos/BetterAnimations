@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Threading;
 using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.IO;
@@ -48,14 +47,11 @@ public class AseReader : IAssetReader {
 
     // We require the main thread to create a Texture2D instance.
     AseAsset aseAsset = null;
-    using ManualResetEvent evt = new(false);
-    Main.QueueMainThreadAction(() => {
+    Main.RunOnMainThread(() => {
       Texture2D texture2D = AseTextureToTexture2D(spriteSheet.TextureAtlas.Texture);
       aseAsset = new AseAsset(asepriteFile, texture2D, spriteSheet);
       // ReSharper disable once AccessToDisposedClosure
-      evt.Set();
-    });
-    evt.WaitOne();
+    }).Wait();
 
     return aseAsset as T;
   }
