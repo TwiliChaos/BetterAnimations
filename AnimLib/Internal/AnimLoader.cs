@@ -193,6 +193,7 @@ internal static class AnimationLoader {
       if (!ModContent.HasAsset(texturePath))
         throw new MissingResourceException(
           $"[{mod.Name}:{type.FullName}]: Error constructing {type.Name}: Invalid texture path \"{texturePath}\".");
+      _t = ModContent.Request<Texture2D>(texturePath);
     }
 
     if (source.tracks is null)
