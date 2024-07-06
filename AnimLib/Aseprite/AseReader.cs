@@ -1,9 +1,12 @@
 ﻿using System.IO;
+using System.Text;
 using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
+using AsepriteDotNet.Common;
 using AsepriteDotNet.IO;
 using AsepriteDotNet.Processors;
 using ReLogic.Content.Readers;
+using Terraria.ModLoader.IO;
 using Texture = AsepriteDotNet.Texture;
 
 namespace AnimLib.Aseprite;
@@ -45,33 +48,31 @@ public class AseReader : IAssetReader {
     // https://github.com/AristurtleDev/AsepriteDotNet?tab=readme-ov-file#processor
     SpriteSheet spriteSheet = SpriteSheetProcessor.Process(asepriteFile);
 
-    // We require the main thread to create a Texture2D instance.
-    AseAsset aseAsset = null;
-    Main.RunOnMainThread(() => {
-      Texture2D texture2D = AseTextureToTexture2D(spriteSheet.TextureAtlas.Texture);
-      aseAsset = new AseAsset(asepriteFile, texture2D, spriteSheet);
-      // ReSharper disable once AccessToDisposedClosure
-    }).Wait();
+    string name = asepriteFile.Layers[0].Name;
+    var texture2D = AseTextureToTexture2DAsset(spriteSheet.TextureAtlas.Texture, name);
+    AseAsset aseAsset = new(asepriteFile, texture2D, spriteSheet);
 
     return aseAsset as T;
   }
 
-  private static Texture2D AseTextureToTexture2D(Texture aseTexture) {
-    int width = aseTexture.Size.Width;
-    int height = aseTexture.Size.Height;
+  private static Asset<Texture2D> AseTextureToTexture2DAsset(Texture aseTexture, string name) {
+    // We do not use "using" here, the reader will close the stream once it creates the Texture2D.
+    MemoryStream stream = new();
 
-    byte[] bytes = new byte[width * height * 4];
-    for (int i = 0; i < aseTexture.Pixels.Length; i++) {
-      (byte r, byte g, byte b, byte a) = aseTexture.Pixels[i];
-      int idx = i * 4;
-      bytes[idx] = r;
-      bytes[idx + 1] = g;
-      bytes[idx + 2] = b;
-      bytes[idx + 3] = a;
+    // We create a stream representing a "rawimg" so that an existing reader can create a Asset<Texture2D> for us
+    using (BinaryWriter writer = new(stream, Encoding.Default, leaveOpen: true)) {
+      writer.Write(ImageIO.VERSION);
+      writer.Write(aseTexture.Size.Width);
+      writer.Write(aseTexture.Size.Height);
+      foreach (Rgba32 t in aseTexture.Pixels) {
+        writer.Write(t.PackedValue);
+      }
+
+      stream.Seek(0, SeekOrigin.Begin);
+      writer.Close();
     }
 
-    Texture2D texture2D = new(Main.graphics.GraphicsDevice, width, height);
-    texture2D.SetData(bytes);
-    return texture2D;
+    string filename = name + ".rawimg";
+    return AnimLibMod.Instance.AseAssets.CreateUntracked<Texture2D>(stream, filename, AssetRequestMode.AsyncLoad);
   }
 }

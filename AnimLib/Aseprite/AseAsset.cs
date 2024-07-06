@@ -10,7 +10,7 @@ namespace AnimLib.Aseprite;
 /// and an XNA <see cref="Texture2D"/> asset created from the sprite sheet.
 /// </summary>
 public sealed class AseAsset : IDisposable {
-  public AseAsset(AsepriteFile file, Texture2D texture2D, SpriteSheet spriteSheet) {
+  public AseAsset(AsepriteFile file, Asset<Texture2D> texture2D, SpriteSheet spriteSheet) {
     this.file = file;
     this.texture2D = texture2D;
     this.spriteSheet = spriteSheet;
@@ -25,7 +25,7 @@ public sealed class AseAsset : IDisposable {
   /// Texture2D that represents the Spritesheet generated from the Aseprite file.
   /// <seealso cref="AsepriteDotNet.Processors.SpriteSheetProcessor"/>
   /// </summary>
-  public readonly Texture2D texture2D;
+  public readonly Asset<Texture2D> texture2D;
 
   /// <summary>
   /// Contains animation data and Rects data from the Aseprite file, mapped to the <see cref="texture2D"/>.

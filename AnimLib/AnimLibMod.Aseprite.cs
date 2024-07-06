@@ -1,8 +1,9 @@
-﻿using AnimLib.Aseprite;
+﻿using System.IO;
+using AnimLib.Aseprite;
 using ReLogic.Content.Sources;
 using ReLogic.Utilities;
 
-namespace AnimLib; 
+namespace AnimLib;
 
 public sealed partial class AnimLibMod {
   /// <summary>
@@ -15,4 +16,10 @@ public sealed partial class AnimLibMod {
     Main.instance.Services.Get<AssetReaderCollection>().RegisterReader(new AseReader(), ".ase", ".aseprite");
     return base.CreateDefaultContentSource();
   }
+
+  internal Asset<Texture2D> CreateTexture2DAsset(Stream stream, string filename) {
+    return AseAssets.CreateUntracked<Texture2D>(stream, filename, AssetRequestMode.AsyncLoad);
+  }
+
+  public readonly AssetRepository AseAssets = new(Main.instance.Services.Get<AssetReaderCollection>());
 }
