@@ -1,6 +1,3 @@
-using System;
-using Terraria.ModLoader;
-
 namespace AnimLib;
 
 internal static class ThrowHelper {

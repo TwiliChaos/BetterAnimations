@@ -1,13 +1,8 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using JetBrains.Annotations;
-using Terraria;
-using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
-using NotNull = System.Diagnostics.CodeAnalysis.NotNullAttribute;
+using NotNull = JetBrains.Annotations.NotNullAttribute;
 
 namespace AnimLib.Abilities;
 

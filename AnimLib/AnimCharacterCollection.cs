@@ -1,9 +1,5 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using AnimLib.Internal;
-using JetBrains.Annotations;
-using Terraria.ModLoader;
 
 namespace AnimLib;
 

@@ -1,7 +1,4 @@
-﻿using System;
-using JetBrains.Annotations;
-
-namespace AnimLib.Animations;
+﻿namespace AnimLib.Animations;
 
 /// <summary>
 /// Single frame of animation that switches to another spritesheet.

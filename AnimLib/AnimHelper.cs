@@ -1,9 +1,7 @@
-using System;
 using System.Linq;
 using AnimLib.Abilities;
 using AnimLib.Animations;
 using AnimLib.Internal;
-using Terraria.ModLoader;
 
 namespace AnimLib;
 

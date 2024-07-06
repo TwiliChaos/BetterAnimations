@@ -1,6 +1,4 @@
 ﻿using AnimLib.Utilities;
-using Microsoft.Xna.Framework;
-using System;
 using System.Reflection;
 using Terraria.Graphics.Shaders;
 

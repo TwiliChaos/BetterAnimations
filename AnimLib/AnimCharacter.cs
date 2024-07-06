@@ -1,13 +1,7 @@
-using System;
-using System.Collections.Generic;
 using AnimLib.Abilities;
 using AnimLib.Animations;
 using AnimLib.Extensions;
 using AnimLib.Internal;
-using JetBrains.Annotations;
-using Microsoft.Xna.Framework;
-using Terraria;
-using Terraria.ModLoader;
 
 namespace AnimLib;
 

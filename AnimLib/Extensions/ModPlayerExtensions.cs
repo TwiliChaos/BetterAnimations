@@ -1,7 +1,5 @@
 using AnimLib.Abilities;
 using AnimLib.Animations;
-using JetBrains.Annotations;
-using Terraria.ModLoader;
 
 namespace AnimLib.Extensions;
 

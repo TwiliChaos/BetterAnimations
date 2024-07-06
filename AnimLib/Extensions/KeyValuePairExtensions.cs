@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace AnimLib.Extensions;
 
 internal static class KeyValuePairExtensions {

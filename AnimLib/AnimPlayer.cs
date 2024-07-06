@@ -1,10 +1,6 @@
 using AnimLib.Abilities;
 using AnimLib.Animations;
 using AnimLib.Networking;
-using JetBrains.Annotations;
-using System;
-using Terraria;
-using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
 namespace AnimLib;

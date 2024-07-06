@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using Terraria.DataStructures;
-using Terraria.ModLoader;
 
 namespace AnimLib.Compat.Implementations;
 

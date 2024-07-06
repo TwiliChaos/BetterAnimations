@@ -1,8 +1,4 @@
-﻿using System;
-using Terraria;
-using Terraria.ModLoader;
-
-namespace AnimLib.Compat;
+﻿namespace AnimLib.Compat;
 
 public abstract class AnimCompatSystem : ModSystem {
   /// <summary>

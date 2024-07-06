@@ -2,9 +2,7 @@ using System.IO;
 using System.Linq;
 using AnimLib.Abilities;
 using AnimLib.Extensions;
-using Terraria;
 using Terraria.ID;
-using Terraria.ModLoader;
 
 namespace AnimLib.Networking;
 

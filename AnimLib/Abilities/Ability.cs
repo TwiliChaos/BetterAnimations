@@ -1,9 +1,5 @@
 using System.IO;
 using AnimLib.Projectiles;
-using JetBrains.Annotations;
-using Microsoft.Xna.Framework;
-using Terraria;
-using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
 namespace AnimLib.Abilities;

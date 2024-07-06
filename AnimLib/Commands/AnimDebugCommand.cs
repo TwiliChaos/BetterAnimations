@@ -1,7 +1,4 @@
-﻿using JetBrains.Annotations;
-using Terraria.ModLoader;
-
-namespace AnimLib.Commands;
+﻿namespace AnimLib.Commands;
 
 [UsedImplicitly]
 internal class AnimDebugCommand : ModCommand {

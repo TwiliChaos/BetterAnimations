@@ -1,7 +1,4 @@
-﻿using JetBrains.Annotations;
-using Microsoft.Xna.Framework;
-
-namespace AnimLib.Animations;
+﻿namespace AnimLib.Animations;
 
 /// <summary>
 /// Single frame of animation. Stores sprite position on the sprite sheet, and duration of the frame.

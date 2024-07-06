@@ -1,7 +1,4 @@
 using AnimLib.Abilities;
-using JetBrains.Annotations;
-using Terraria;
-using Terraria.ModLoader;
 
 namespace AnimLib.Projectiles;
 

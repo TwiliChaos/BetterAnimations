@@ -1,6 +1,4 @@
-﻿using JetBrains.Annotations;
-
-namespace AnimLib.Animations;
+﻿namespace AnimLib.Animations;
 
 /// <summary>
 /// Used to determine how a track behaves after its last frame is played.

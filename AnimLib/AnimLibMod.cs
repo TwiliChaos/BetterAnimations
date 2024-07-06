@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -7,11 +6,8 @@ using AnimLib.Animations;
 using AnimLib.Extensions;
 using AnimLib.Internal;
 using AnimLib.Networking;
-using JetBrains.Annotations;
-using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
-using Terraria.ModLoader;
 using Animation = AnimLib.Animations.Animation;
 
 namespace AnimLib;

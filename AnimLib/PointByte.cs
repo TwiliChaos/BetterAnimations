@@ -1,7 +1,4 @@
-﻿using System;
-using Microsoft.Xna.Framework;
-
-namespace AnimLib;
+﻿namespace AnimLib;
 
 /// <summary>
 /// Uses <see cref="byte"/>s to represent a point.

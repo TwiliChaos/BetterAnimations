@@ -1,9 +1,4 @@
-﻿using System;
-using JetBrains.Annotations;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
-
-namespace AnimLib.Animations;
+﻿namespace AnimLib.Animations;
 
 /// <summary>
 /// Single frame of animation that switches to another spritesheet.

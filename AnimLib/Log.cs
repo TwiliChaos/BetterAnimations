@@ -1,5 +1,3 @@
-using System;
-
 namespace AnimLib;
 
 internal static class Log {

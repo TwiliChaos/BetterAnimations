@@ -1,10 +1,4 @@
-﻿using System.Collections.Generic;
-using JetBrains.Annotations;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
-using Terraria.ModLoader;
-
-namespace AnimLib.Animations;
+﻿namespace AnimLib.Animations;
 
 /// <summary>
 /// Contains all animation data for a single animation set. This animation data is used for all players.

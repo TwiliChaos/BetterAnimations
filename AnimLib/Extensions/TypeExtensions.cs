@@ -1,5 +1,3 @@
-using System;
-
 namespace AnimLib.Extensions;
 
 internal static class TypeExtensions {

@@ -1,15 +1,9 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using AnimLib.Abilities;
 using AnimLib.Animations;
 using AnimLib.Compat;
 using AnimLib.Extensions;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
-using Terraria;
 using Terraria.ID;
-using Terraria.ModLoader;
 using Terraria.ModLoader.Core;
 using Terraria.ModLoader.Exceptions;
 

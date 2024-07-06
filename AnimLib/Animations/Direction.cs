@@ -1,6 +1,4 @@
-﻿using JetBrains.Annotations;
-
-namespace AnimLib.Animations;
+﻿namespace AnimLib.Animations;
 
 /// <summary>
 /// Used to determine the direction that frames in a track are played.
