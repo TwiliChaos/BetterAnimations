@@ -16,7 +16,7 @@ namespace AnimLib;
 /// Interface for any mods using this mod to interact with.
 /// </summary>
 [PublicAPI]
-public sealed class AnimLibMod : Mod {
+public sealed partial class AnimLibMod : Mod {
   /// <summary>
   /// Creates a new instance of <see cref="AnimLibMod"/>.
   /// </summary>
