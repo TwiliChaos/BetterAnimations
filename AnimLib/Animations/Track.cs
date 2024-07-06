@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
@@ -38,13 +38,15 @@ namespace AnimLib.Animations {
     /// Creates a track using <see cref="LoopMode.Always"/> and <see cref="Direction.Forward"/>, and with the given <see cref="Frame"/> array.
     /// </summary>
     /// <inheritdoc cref="Track(LoopMode, Direction, Frame[])"/>
-    public Track(Frame[] frames) : this(LoopMode.Always, Direction.Forward, frames) { }
+    public Track(Frame[] frames) : this(LoopMode.Always, Direction.Forward, frames) {
+    }
 
     /// <summary>
     /// Creates a track with the given <see cref="LoopMode"/>, using <see cref="Direction.Forward"/>, and the given <see cref="Frame"/> array.
     /// </summary>
     /// <inheritdoc cref="Track(LoopMode, Direction, Frame[])"/>
-    public Track(LoopMode loopMode, Frame[] frames) : this(loopMode, Direction.Forward, frames) { }
+    public Track(LoopMode loopMode, Frame[] frames) : this(loopMode, Direction.Forward, frames) {
+    }
 
     /// <summary>
     /// Creates a track with the given <see cref="LoopMode"/>, <see cref="Direction"/>, and <see cref="Frame"/> array.
@@ -69,14 +71,16 @@ namespace AnimLib.Animations {
     /// <inheritdoc cref="Track(LoopMode, Direction, IFrame[])"/>
     /// </summary>
     /// <inheritdoc cref="Track(LoopMode, Direction, IFrame[])"/>
-    public Track(IFrame[] frames) : this(LoopMode.Always, Direction.Forward, frames) { }
+    public Track(IFrame[] frames) : this(LoopMode.Always, Direction.Forward, frames) {
+    }
 
     /// <summary>
     /// Creates a track with the given <see cref="LoopMode"/>, <see cref="Direction"/>, and <see cref="Frame"/> array.
     /// <inheritdoc cref="Track(LoopMode, Direction, IFrame[])"/>
     /// </summary>
     /// <inheritdoc cref="Track(LoopMode, Direction, IFrame[])"/>
-    public Track(LoopMode loopMode, IFrame[] frames) : this(loopMode, Direction.Forward, frames) { }
+    public Track(LoopMode loopMode, IFrame[] frames) : this(loopMode, Direction.Forward, frames) {
+    }
 
     /// <summary>
     /// <para>
@@ -153,7 +157,8 @@ namespace AnimLib.Animations {
     /// </summary>
     /// <inheritdoc cref="Range(LoopMode, Direction, Frame, Frame)"/>
     [NotNull]
-    public static Track Range(Frame start, Frame end) => Range(LoopMode.Always, Direction.Forward, start, end);
+    public static Track Range(Frame start, Frame end) =>
+      Range(LoopMode.Always, Direction.Forward, start, end);
 
     /// <summary>
     /// Creates a track with the given <see cref="LoopMode"/> and using <see cref="Direction.Forward"/>, with a <see cref="Frame"/> array ranging from
@@ -162,7 +167,8 @@ namespace AnimLib.Animations {
     /// </summary>
     /// <inheritdoc cref="Range(LoopMode, Direction, Frame, Frame)"/>
     [NotNull]
-    public static Track Range(LoopMode loopMode, Frame start, Frame end) => Range(loopMode, Direction.Forward, start, end);
+    public static Track Range(LoopMode loopMode, Frame start, Frame end) =>
+      Range(loopMode, Direction.Forward, start, end);
 
     /// <summary>
     /// Creates a track with the given <see cref="LoopMode"/> and <see cref="Direction"/>, with a <see cref="Frame"/> array ranging from
@@ -181,7 +187,8 @@ namespace AnimLib.Animations {
       // Fill range of frames
       // I.e. if given [(0,1), (0,4)], we make [(0,1), (0,2), (0,3), (0,4)]
       if (start.tile.x != end.tile.x)
-        throw new ArgumentException($"The X values of {nameof(start)} and {nameof(end)} must be equal, instead got {start.tile.x}, {end.tile.x}.");
+        throw new ArgumentException(
+          $"The X values of {nameof(start)} and {nameof(end)} must be equal, instead got {start.tile.x}, {end.tile.x}.");
       if (start.tile.y >= end.tile.y) {
         throw new ArgumentOutOfRangeException(
           $"The Y value of {nameof(start)} must be less than the Y value of {nameof(end)}, instead got {start.tile.y}, {end.tile.y}.");
@@ -234,7 +241,7 @@ namespace AnimLib.Animations {
     /// <returns>A valid <see cref="Texture2D"/> if <see cref="AnimationSource.texture"/> should be overridden, else <see langword="null"/>.</returns>
     public Texture2D GetTexture(int frameIdx) {
       if (textures is null) return null;
-      if(!_load_completed) CompleteLoading();
+      if (!_load_completed) CompleteLoading();
 
       frameIdx = (int)MathHelper.Clamp(frameIdx, 0, length - 1);
 
@@ -264,7 +271,8 @@ namespace AnimLib.Animations {
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="frameIndex"/> cannot be less than 0 or greater than the length of frames.</exception>
     public void SetTextureAtFrameIndexAsset(Asset<Texture2D> textureAsset, int frameIndex) {
       if (frameIndex < 0 || frameIndex >= length)
-        throw new ArgumentOutOfRangeException(nameof(frameIndex), $"{nameof(frameIndex)} must be non-negative and less than the length of frames.");
+        throw new ArgumentOutOfRangeException(nameof(frameIndex),
+          $"{nameof(frameIndex)} must be non-negative and less than the length of frames.");
       textures ??= new Dictionary<int, Asset<Texture2D>>();
       textures[frameIndex] = textureAsset;
     }
@@ -277,11 +285,13 @@ namespace AnimLib.Animations {
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="frameIndex"/> cannot be less than 0 or greater than the length of frames.</exception>
     public void SetTextureAtFrameIndex(string texturePath, int frameIndex) {
       if (frameIndex < 0 || frameIndex >= length)
-        throw new ArgumentOutOfRangeException(nameof(frameIndex), $"{nameof(frameIndex)} must be non-negative and less than the length of frames.");
-      if(texturePath is null) {
+        throw new ArgumentOutOfRangeException(nameof(frameIndex),
+          $"{nameof(frameIndex)} must be non-negative and less than the length of frames.");
+      if (texturePath is null) {
         SetTextureAtFrameIndexAsset(null, frameIndex);
         return;
       }
+
       if (AnimationSource.texture_assets.TryGetValue(texturePath, out var tex)) {
         SetTextureAtFrameIndexAsset(tex, frameIndex);
       }
@@ -296,11 +306,13 @@ namespace AnimLib.Animations {
     /// Waits for all track's textures to be loaded
     /// </summary>
     public void CompleteLoading() {
-      if(_load_completed) return;
-      if(textures is not null) 
+      if (_load_completed) return;
+      if (textures is not null) {
         foreach (var texture in textures.Values) {
           texture?.Wait();
         }
+      }
+
       _load_completed = true;
     }
   }

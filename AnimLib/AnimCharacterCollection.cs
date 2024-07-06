@@ -39,8 +39,8 @@ namespace AnimLib {
       if (ActiveCharacter == null) return true;
       return activePriority switch
       {
-         AnimCharacter.Priority.Lowest => true,
-         _ => priority > activePriority,
+        AnimCharacter.Priority.Lowest => true,
+        _ => priority > activePriority,
       };
     }
 

@@ -106,8 +106,7 @@ namespace AnimLib {
     /// </remarks>
     /// <seealso cref="AbilityManager.AutoSave">AbilityManager.AutoSave</seealso>
     [Obsolete]
-    public override void SaveData(TagCompound tag)/* tModPorter Suggestion: Edit tag parameter instead of returning new TagCompound */
-    {
+    public override void SaveData(TagCompound tag) {/* tModPorter Suggestion: Edit tag parameter instead of returning new TagCompound */
       if ((OldAbilities?.Count ?? 0) > 0)
       {
         tag[AllAbilityTagKey] = OldAbilities;

@@ -259,10 +259,10 @@ namespace AnimLib.Animations {
       if (AnimPlayer.Local?.DebugEnabled ?? false) {
         // TODO: replace Main.NewText spam with something better?
         Main.NewText($"Frame called: Tile [{MainAnimation.CurrentFrame.tile}], " +
-                     $"{(MainAnimation.CurrentTrack.HasTextures ? $" {MainAnimation.CurrentTexture.Name}" : string.Empty)} " +
-                     $"{TrackName}{(Reversed ? " (Reversed)" : "")} " +
-                     $"Time: {FrameTime}, " +
-                     $"AnimIndex: {FrameIndex}/{MainAnimation.CurrentTrack.length}");
+          $"{(MainAnimation.CurrentTrack.HasTextures ? $" {MainAnimation.CurrentTexture.Name}" : string.Empty)} " +
+          $"{TrackName}{(Reversed ? " (Reversed)" : "")} " +
+          $"Time: {FrameTime}, " +
+          $"AnimIndex: {FrameIndex}/{MainAnimation.CurrentTrack.length}");
       }
 
       // Loop logic

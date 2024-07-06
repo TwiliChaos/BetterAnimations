@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Terraria.DataStructures;
 using Terraria.ModLoader;
 
 namespace AnimLib.Compat.Implementations {
@@ -13,7 +14,7 @@ namespace AnimLib.Compat.Implementations {
       if (ModContent.TryFind(ModName, "BallLayer", out PlayerDrawLayer ballLayer)) {
         GlobalCompatConditions.AddGraphicsDisableCondition(
           GetStandardPredicate(
-            p => ballLayer.GetDefaultVisibility(new() { drawPlayer = p })
+            p => ballLayer.GetDefaultVisibility(new PlayerDrawSet { drawPlayer = p })
           ));
         _initialized = true;
       }

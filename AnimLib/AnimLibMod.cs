@@ -79,7 +79,7 @@ namespace AnimLib {
         throw new ArgumentException($"The mod {mod.Name} does not have any {nameof(AnimationSource)}s loaded.");
 
       return (T)sources.FirstOrDefault(s => s is T)
-             ?? throw new ArgumentException($"{typeof(T)} does not belong to {mod.Name}");
+        ?? throw new ArgumentException($"{typeof(T)} does not belong to {mod.Name}");
     }
 
 
@@ -152,6 +152,7 @@ namespace AnimLib {
         // Now in either case of this being server or player, the fromWho is the player.
         whoAmI = reader.ReadUInt16();
       }
+
       ModNetHandler.Instance.HandlePacket(reader, whoAmI);
     }
   }
