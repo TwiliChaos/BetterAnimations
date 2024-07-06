@@ -1,7 +1,7 @@
 displayName = AnimLib
 author = TwiliChaos
 version = 0.3.1.0
-dllReferences = JetBrains.Annotations
+dllReferences = JetBrains.Annotations, AsepriteDotNet
 homepage = 
 hideCode = false
 hideResources = false
