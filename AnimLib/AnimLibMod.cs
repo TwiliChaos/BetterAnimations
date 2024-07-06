@@ -14,146 +14,146 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using Animation = AnimLib.Animations.Animation;
 
-namespace AnimLib {
+namespace AnimLib;
+
+/// <summary>
+/// Interface for any mods using this mod to interact with.
+/// </summary>
+[PublicAPI]
+public sealed class AnimLibMod : Mod {
   /// <summary>
-  /// Interface for any mods using this mod to interact with.
+  /// Creates a new instance of <see cref="AnimLibMod"/>.
   /// </summary>
-  [PublicAPI]
-  public sealed class AnimLibMod : Mod {
-    /// <summary>
-    /// Creates a new instance of <see cref="AnimLibMod"/>.
-    /// </summary>
-    public AnimLibMod() {
-      Instance ??= this;
+  public AnimLibMod() {
+    Instance ??= this;
+  }
+
+  /// <summary>
+  /// The active instance of <see cref="AnimLibMod"/>.
+  /// </summary>
+  public static AnimLibMod Instance { get; private set; }
+
+
+  /// <summary>
+  /// GitHub profile that the mod's repository is stored on.
+  /// </summary>
+  public static string GithubUserName => "TwiliChaos";
+
+  /// <summary>
+  /// Name of the GitHub repository this mod is stored on.
+  /// </summary>
+  public static string GithubProjectName => "AnimLib";
+
+  /// <summary>
+  /// Gets the <see cref="AnimationController"/> of the given type from the given <see cref="ModPlayer"/>.
+  /// Use this if you want your code to use values such as the current track and frame.
+  /// <para>This <strong>cannot</strong> be used during the <see cref="ModPlayer.Initialize"/> method.</para>
+  /// </summary>
+  /// <typeparam name="T">Type of <see cref="AnimationController"/> to get.</typeparam>
+  /// <param name="modPlayer">The <see cref="ModPlayer"/>.</param>
+  /// <returns>An <see cref="AnimationController"/> of type <typeparamref name="T"/>.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="modPlayer"/> cannot be null.</exception>
+  /// <exception cref="ArgumentException">
+  /// The <see cref="Mod"/> in <paramref name="modPlayer"/> does not have an <see cref="AnimationController"/> of type <typeparamref name="T"/>.
+  /// </exception>
+  [NotNull]
+  public static T GetAnimationController<T>([NotNull] ModPlayer modPlayer) where T : AnimationController {
+    ArgumentNullException.ThrowIfNull(modPlayer);
+    AnimationController controller = modPlayer.GetAnimCharacter().animationController;
+    return controller as T ?? throw ThrowHelper.BadType<T>(controller, modPlayer.Mod, nameof(T));
+  }
+
+  /// <summary>
+  /// Gets the <see cref="AnimationSource"/> of the given type.
+  /// Use this if you want to access one of your <see cref="AnimationSource"/>s.
+  /// <para>This <strong>cannot</strong> be used during the <see cref="Mod.PostSetupContent"/> method or earlier.</para>
+  /// </summary>
+  /// <param name="mod">Your mod.</param>
+  /// <typeparam name="T">Type of <see cref="AnimationSource"/> to get.</typeparam>
+  /// <returns>An <see cref="AnimationSource"/> of type <typeparamref name="T"/>.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="mod"/> cannot be <see langword="null"/>.</exception>
+  /// <exception cref="ArgumentException"><paramref name="mod"/> has no <see cref="AnimationSource"/>, or source from the wrong mod was used.</exception>
+  [NotNull]
+  public static T GetAnimationSource<T>([NotNull] Mod mod) where T : AnimationSource {
+    ArgumentNullException.ThrowIfNull(mod);
+    if (!AnimLoader.AnimationSources.TryGetValue(mod, out var sources))
+      throw new ArgumentException($"The mod {mod.Name} does not have any {nameof(AnimationSource)}s loaded.");
+
+    return (T)sources.FirstOrDefault(s => s is T)
+      ?? throw new ArgumentException($"{typeof(T)} does not belong to {mod.Name}");
+  }
+
+
+  /// <summary>
+  /// Gets the <see cref="AbilityManager"/> of the given type from the given <see cref="ModPlayer"/>.
+  /// Use this if you want your code to access ability information.
+  /// <para>This <strong>cannot</strong> be used during the <see cref="ModPlayer.Initialize"/> method.</para>
+  /// </summary>
+  /// <typeparam name="T">Type of <see cref="AbilityManager"/> to get.</typeparam>
+  /// <param name="modPlayer">The <see cref="ModPlayer"/>.</param>
+  /// <returns>An <see cref="AbilityManager"/> of type <typeparamref name="T"/>.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="modPlayer"/> cannot be null.</exception>
+  /// <exception cref="ArgumentException">
+  /// The <see cref="Mod"/> in <paramref name="modPlayer"/> does not have an <see cref="AbilityManager"/> of type <typeparamref name="T"/>.
+  /// </exception>
+  [NotNull]
+  public static T GetAbilityManager<T>([NotNull] ModPlayer modPlayer) where T : AbilityManager {
+    ArgumentNullException.ThrowIfNull(modPlayer);
+    AbilityManager manager = modPlayer.GetAnimCharacter().abilityManager;
+    return manager as T ?? throw ThrowHelper.BadType<T>(manager, modPlayer.Mod, nameof(T));
+  }
+
+
+  /// <summary>
+  /// Gets a <see cref="DrawData"/> from the given <see cref="PlayerDrawSet"/>, based on your <see cref="AnimationController"/> and
+  /// <see cref="AnimationSource"/>.
+  /// <para>
+  /// This can be a quick way to get a <see cref="DrawData"/> that's ready to use for your <see cref="PlayerDrawLayer"/>s.
+  /// For a more performant way of getting a <see cref="DrawData"/>, cache your <see cref="AnimationController"/> in your <see cref="ModPlayer"/>
+  /// and <see cref="Animations.Animation"/> in your <see cref="AnimationController"/>, and use
+  /// <see cref="Animations.Animation.GetDrawData(PlayerDrawSet)"/>.
+  /// </para>
+  /// </summary>
+  /// <typeparam name="TController"> Your type of <see cref="AnimationController"/>.</typeparam>
+  /// <typeparam name="TSource"> Your type of <see cref="AnimationSource"/>.</typeparam>
+  /// <param name="drawInfo">The <see cref="PlayerDrawSet"/> to get the <see cref="DrawData"/> from.</param>
+  /// <returns>A <see cref="DrawData"/> that is ready to be drawn. Feel free to modify it.</returns>
+  public static DrawData GetDrawData<TController, TSource>(PlayerDrawSet drawInfo)
+    where TController : AnimationController where TSource : AnimationSource {
+    AnimPlayer animPlayer = drawInfo.drawPlayer.GetModPlayer<AnimPlayer>();
+    Mod mod = AnimHelper.GetModFromController<TController>();
+    AnimationController controller = animPlayer.characters[mod].animationController;
+    Debug.Assert(controller != null);
+    Animation anim = controller.GetAnimation<TSource>();
+    return anim.GetDrawData(drawInfo);
+  }
+
+  /// <summary>
+  /// Use this to null static reference types on unload.
+  /// </summary>
+  internal static event Action OnUnload;
+
+  /// <summary>
+  /// Collects and constructs all <see cref="AnimationSource"/>s across all other <see cref="Mod"/>s.
+  /// </summary>
+  public override void PostSetupContent() => AnimLoader.Load();
+
+  /// <inheritdoc/>
+  public override void Unload() {
+    OnUnload?.Invoke();
+    OnUnload = null;
+    Instance = null;
+  }
+
+  public override void HandlePacket(BinaryReader reader, int whoAmI) {
+    if (Main.netMode == NetmodeID.MultiplayerClient) {
+      // If packet is sent TO server, it is FROM player.
+      // If packet is sent TO player, it is FROM server (This block) and fromWho is 255.
+      // Server-written packet includes the fromWho, the player that created it.
+      // Now in either case of this being server or player, the fromWho is the player.
+      whoAmI = reader.ReadUInt16();
     }
 
-    /// <summary>
-    /// The active instance of <see cref="AnimLibMod"/>.
-    /// </summary>
-    public static AnimLibMod Instance { get; private set; }
-
-
-    /// <summary>
-    /// GitHub profile that the mod's repository is stored on.
-    /// </summary>
-    public static string GithubUserName => "TwiliChaos";
-
-    /// <summary>
-    /// Name of the GitHub repository this mod is stored on.
-    /// </summary>
-    public static string GithubProjectName => "AnimLib";
-
-    /// <summary>
-    /// Gets the <see cref="AnimationController"/> of the given type from the given <see cref="ModPlayer"/>.
-    /// Use this if you want your code to use values such as the current track and frame.
-    /// <para>This <strong>cannot</strong> be used during the <see cref="ModPlayer.Initialize"/> method.</para>
-    /// </summary>
-    /// <typeparam name="T">Type of <see cref="AnimationController"/> to get.</typeparam>
-    /// <param name="modPlayer">The <see cref="ModPlayer"/>.</param>
-    /// <returns>An <see cref="AnimationController"/> of type <typeparamref name="T"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="modPlayer"/> cannot be null.</exception>
-    /// <exception cref="ArgumentException">
-    /// The <see cref="Mod"/> in <paramref name="modPlayer"/> does not have an <see cref="AnimationController"/> of type <typeparamref name="T"/>.
-    /// </exception>
-    [NotNull]
-    public static T GetAnimationController<T>([NotNull] ModPlayer modPlayer) where T : AnimationController {
-      ArgumentNullException.ThrowIfNull(modPlayer);
-      AnimationController controller = modPlayer.GetAnimCharacter().animationController;
-      return controller as T ?? throw ThrowHelper.BadType<T>(controller, modPlayer.Mod, nameof(T));
-    }
-
-    /// <summary>
-    /// Gets the <see cref="AnimationSource"/> of the given type.
-    /// Use this if you want to access one of your <see cref="AnimationSource"/>s.
-    /// <para>This <strong>cannot</strong> be used during the <see cref="Mod.PostSetupContent"/> method or earlier.</para>
-    /// </summary>
-    /// <param name="mod">Your mod.</param>
-    /// <typeparam name="T">Type of <see cref="AnimationSource"/> to get.</typeparam>
-    /// <returns>An <see cref="AnimationSource"/> of type <typeparamref name="T"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="mod"/> cannot be <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="mod"/> has no <see cref="AnimationSource"/>, or source from the wrong mod was used.</exception>
-    [NotNull]
-    public static T GetAnimationSource<T>([NotNull] Mod mod) where T : AnimationSource {
-      ArgumentNullException.ThrowIfNull(mod);
-      if (!AnimLoader.AnimationSources.TryGetValue(mod, out var sources))
-        throw new ArgumentException($"The mod {mod.Name} does not have any {nameof(AnimationSource)}s loaded.");
-
-      return (T)sources.FirstOrDefault(s => s is T)
-        ?? throw new ArgumentException($"{typeof(T)} does not belong to {mod.Name}");
-    }
-
-
-    /// <summary>
-    /// Gets the <see cref="AbilityManager"/> of the given type from the given <see cref="ModPlayer"/>.
-    /// Use this if you want your code to access ability information.
-    /// <para>This <strong>cannot</strong> be used during the <see cref="ModPlayer.Initialize"/> method.</para>
-    /// </summary>
-    /// <typeparam name="T">Type of <see cref="AbilityManager"/> to get.</typeparam>
-    /// <param name="modPlayer">The <see cref="ModPlayer"/>.</param>
-    /// <returns>An <see cref="AbilityManager"/> of type <typeparamref name="T"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="modPlayer"/> cannot be null.</exception>
-    /// <exception cref="ArgumentException">
-    /// The <see cref="Mod"/> in <paramref name="modPlayer"/> does not have an <see cref="AbilityManager"/> of type <typeparamref name="T"/>.
-    /// </exception>
-    [NotNull]
-    public static T GetAbilityManager<T>([NotNull] ModPlayer modPlayer) where T : AbilityManager {
-      ArgumentNullException.ThrowIfNull(modPlayer);
-      AbilityManager manager = modPlayer.GetAnimCharacter().abilityManager;
-      return manager as T ?? throw ThrowHelper.BadType<T>(manager, modPlayer.Mod, nameof(T));
-    }
-
-
-    /// <summary>
-    /// Gets a <see cref="DrawData"/> from the given <see cref="PlayerDrawSet"/>, based on your <see cref="AnimationController"/> and
-    /// <see cref="AnimationSource"/>.
-    /// <para>
-    /// This can be a quick way to get a <see cref="DrawData"/> that's ready to use for your <see cref="PlayerDrawLayer"/>s.
-    /// For a more performant way of getting a <see cref="DrawData"/>, cache your <see cref="AnimationController"/> in your <see cref="ModPlayer"/>
-    /// and <see cref="Animations.Animation"/> in your <see cref="AnimationController"/>, and use
-    /// <see cref="Animations.Animation.GetDrawData(PlayerDrawSet)"/>.
-    /// </para>
-    /// </summary>
-    /// <typeparam name="TController"> Your type of <see cref="AnimationController"/>.</typeparam>
-    /// <typeparam name="TSource"> Your type of <see cref="AnimationSource"/>.</typeparam>
-    /// <param name="drawInfo">The <see cref="PlayerDrawSet"/> to get the <see cref="DrawData"/> from.</param>
-    /// <returns>A <see cref="DrawData"/> that is ready to be drawn. Feel free to modify it.</returns>
-    public static DrawData GetDrawData<TController, TSource>(PlayerDrawSet drawInfo)
-      where TController : AnimationController where TSource : AnimationSource {
-      AnimPlayer animPlayer = drawInfo.drawPlayer.GetModPlayer<AnimPlayer>();
-      Mod mod = AnimHelper.GetModFromController<TController>();
-      AnimationController controller = animPlayer.characters[mod].animationController;
-      Debug.Assert(controller != null);
-      Animation anim = controller.GetAnimation<TSource>();
-      return anim.GetDrawData(drawInfo);
-    }
-
-    /// <summary>
-    /// Use this to null static reference types on unload.
-    /// </summary>
-    internal static event Action OnUnload;
-
-    /// <summary>
-    /// Collects and constructs all <see cref="AnimationSource"/>s across all other <see cref="Mod"/>s.
-    /// </summary>
-    public override void PostSetupContent() => AnimLoader.Load();
-
-    /// <inheritdoc/>
-    public override void Unload() {
-      OnUnload?.Invoke();
-      OnUnload = null;
-      Instance = null;
-    }
-
-    public override void HandlePacket(BinaryReader reader, int whoAmI) {
-      if (Main.netMode == NetmodeID.MultiplayerClient) {
-        // If packet is sent TO server, it is FROM player.
-        // If packet is sent TO player, it is FROM server (This block) and fromWho is 255.
-        // Server-written packet includes the fromWho, the player that created it.
-        // Now in either case of this being server or player, the fromWho is the player.
-        whoAmI = reader.ReadUInt16();
-      }
-
-      ModNetHandler.Instance.HandlePacket(reader, whoAmI);
-    }
+    ModNetHandler.Instance.HandlePacket(reader, whoAmI);
   }
 }
