@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
@@ -87,9 +87,12 @@ public static class AnimTextureAtlasProcessor {
     LayerEntry[] allFrames) {
     Dictionary<string, AnimTextureAtlas> atlasData = [];
 
+    // Allows upscaling during import, so art created at 1px is upscaled to the 2x2 pixel thing Terraria does
+    // TODO: Better handling of Aseprite sprite UserData properties.
+    bool upscale = file.UserData.Text?.Contains("upscale", StringComparison.OrdinalIgnoreCase) ?? false;
+    int scale = upscale ? 2 : 1;
+
     foreach ((string name, var frames) in allFrames) {
-      int frameWidth = file.CanvasWidth;
-      int frameHeight = file.CanvasHeight;
       int frameCount = frames.Length;
 
       Dictionary<int, int> duplicateMap = null;
@@ -102,6 +105,8 @@ public static class AnimTextureAtlasProcessor {
       int columns = (int)Math.Ceiling(sqrt);
       int rows = (frameCount + columns - 1) / columns;
 
+      int frameWidth = file.CanvasWidth * scale;
+      int frameHeight = file.CanvasHeight * scale;
       Size imageSize = new() {
         Width = columns * frameWidth
           + options.BorderPadding * 2
@@ -148,10 +153,16 @@ public static class AnimTextureAtlasProcessor {
 
         // Write the color data
         if (!frame.IsEmpty) {
-          WritePixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth, frameHeight);
+          if (upscale) {
+            WriteScaledPixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth);
+          }
+          else {
+            WritePixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth, frameHeight);
+          }
         }
 
         Rectangle bounds = new(x, y, frameWidth, frameHeight);
+        // TODO: Check if "ProcessorUtilities.GetSlicesForFrame()" needs modifications to handle upscaling
         TextureRegion textureRegion =
           new($"{file.Name} {i}", bounds, ProcessorUtilities.GetSlicesForFrame(frame.FrameIndex, file.Slices));
         regions[frame.FrameIndex] = textureRegion;
@@ -226,10 +237,28 @@ public static class AnimTextureAtlasProcessor {
   private static void WritePixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w, int h) {
     int length = pixels.Length;
     for (int p = 0; p < length; p++) {
-      int px = p % w + x;
-      int py = p / h + y;
+      int px = x + p % w;
+      int py = y + p / h;
       int index = py * imageWidth + px;
       imagePixels[index] = pixels[p];
+    }
+  }
+
+  private static void WriteScaledPixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels,
+    int x, int y, int w) {
+    int length = pixels.Length;
+    for (int p = 0; p < length; p++) {
+      int p2 = p * 2;
+      int px = x + p2 % w; // increase x by 2 per pixel
+      int py = y + p2 / w * 2; // increase y by 2 per row of pixels
+      int row1 = py * imageWidth + px;
+      int row2 = row1 + imageWidth;
+
+      Rgba32 pixel = pixels[p];
+      imagePixels[row1] = pixel;
+      imagePixels[row1 + 1] = pixel;
+      imagePixels[row2] = pixel;
+      imagePixels[row2 + 1] = pixel;
     }
   }
 }
