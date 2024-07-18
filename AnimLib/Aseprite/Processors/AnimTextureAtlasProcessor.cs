@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
@@ -46,7 +46,7 @@ public static class AnimTextureAtlasProcessor {
   private static LayerEntry[] GetAllFrames(AsepriteFile file, ProcessorOptions options) {
     // We want to know what all the valid root layers are
     // These are layers that do not have a parent, and any children will be flattened into them
-    var rootLayers = GetRootLayers(file);
+    var rootLayers = GetRootLayers(file, options);
 
     int frameCount = file.Frames.Length;
     var allFrames = new LayerEntry[rootLayers.Length];
@@ -67,12 +67,15 @@ public static class AnimTextureAtlasProcessor {
     return allFrames;
   }
 
-  private static AsepriteLayer[] GetRootLayers(AsepriteFile file) {
+  private static AsepriteLayer[] GetRootLayers(AsepriteFile file, ProcessorOptions options) {
     var rootLayers = new List<AsepriteLayer>(file.Layers.Length);
 
     for (int i = 0; i < file.Layers.Length; i++) {
       AsepriteLayer layer = file.Layers[i];
-      if (layer.ChildLevel == 0 && layer is not AsepriteGroupLayer { Children.Length: 0 }) {
+      if (layer.ChildLevel == 0 &&
+          layer is not AsepriteGroupLayer { Children.Length: 0 } &&
+          (layer.IsVisible || !options.OnlyVisibleLayers) &&
+          (!layer.IsBackgroundLayer || options.IncludeBackgroundLayer)) {
         rootLayers.Add(layer);
       }
     }
