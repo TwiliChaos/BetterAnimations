@@ -1,4 +1,5 @@
-﻿using AsepriteDotNet;
+﻿using System.Linq;
+using AnimLib.Aseprite.Processors;
 using AsepriteDotNet.Aseprite;
 
 namespace AnimLib.Aseprite;
@@ -6,13 +7,14 @@ namespace AnimLib.Aseprite;
 /// <summary>
 /// Asset representing an .ase or .aseprite file.
 /// This class contains fields for data representing the file,
-/// a sprite sheet generated from <see cref="AsepriteDotNet.Processors.SpriteSheetProcessor"/>,
-/// and an XNA <see cref="Texture2D"/> asset created from the sprite sheet.
+/// a sprite sheet generated from <see cref="AnimSpriteSheetProcessor"/>,
+/// and XNA <see cref="Texture2D"/> assets created from the sprite sheet.
 /// </summary>
+[PublicAPI]
 public sealed class AseAsset : IDisposable {
-  public AseAsset(AsepriteFile file, Asset<Texture2D> texture2D, SpriteSheet spriteSheet) {
+  public AseAsset(AsepriteFile file, AnimSpriteSheet spriteSheet) {
     this.file = file;
-    this.texture2D = texture2D;
+    textures = spriteSheet.Atlases.Select(x => x.Value.Texture).ToArray();
     this.spriteSheet = spriteSheet;
   }
 
@@ -25,14 +27,16 @@ public sealed class AseAsset : IDisposable {
   /// Texture2D that represents the Spritesheet generated from the Aseprite file.
   /// <seealso cref="AsepriteDotNet.Processors.SpriteSheetProcessor"/>
   /// </summary>
-  public readonly Asset<Texture2D> texture2D;
+  public readonly Asset<Texture2D>[] textures;
 
   /// <summary>
-  /// Contains animation data and Rects data from the Aseprite file, mapped to the <see cref="texture2D"/>.
+  /// Contains animation data and Rects data from the Aseprite file, mapped to the <see cref="textures"/>.
   /// </summary>
-  public readonly SpriteSheet spriteSheet;
+  public readonly AnimSpriteSheet spriteSheet;
 
   public void Dispose() {
-    texture2D.Dispose();
+    foreach (var textureAsset in textures) {
+      textureAsset.Dispose();
+    }
   }
 }
