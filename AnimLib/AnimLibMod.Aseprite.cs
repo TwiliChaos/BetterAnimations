@@ -19,13 +19,13 @@ public sealed partial class AnimLibMod {
   /// unless this <see cref="AseReader"/>, or a derivative of it, is added to tML proper.
   /// </remarks>
   public override IContentSource CreateDefaultContentSource() {
-    GetAssetReaderCollection.RegisterReader(new AseReader(), ".ase", ".aseprite");
+    GetAssetReaderCollection().RegisterReader(new AseReader(), ".ase", ".aseprite");
     return base.CreateDefaultContentSource();
   }
 
-  public readonly AssetRepository AseAssets = new(GetAssetReaderCollection);
+  public readonly AssetRepository AseAssets = new(GetAssetReaderCollection());
 
-  private static AssetReaderCollection GetAssetReaderCollection => Main.instance.Services.Get<AssetReaderCollection>();
+  private static AssetReaderCollection GetAssetReaderCollection() => Main.instance.Services.Get<AssetReaderCollection>();
 
   /// <summary>
   /// Converts the provided Aseprite <see cref="AsepriteDotNet.Texture"/> to an XNA <see cref="Texture2D"/>.
