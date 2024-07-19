@@ -11,13 +11,12 @@ namespace AnimLib.Aseprite;
 /// AssetReader to read an Aseprite file (*.ase/*.aseprite) into a format usable by Terraria.
 /// This Reader uses AsepriteDotNet to load the file into an <see cref="AsepriteFile"/> object,
 /// which this reader then uses to create an object that AnimLib and Terraria can use.
-/// This class is used to create an <see cref="AseAsset"/>,
-/// with fields representing the file, sprite sheet data, and Texture2D of the sprite sheet.
+/// This class is used to create an <see cref="AnimSpriteSheet"/>.
 /// https://github.com/AristurtleDev/AsepriteDotNet
 /// </summary>
 public class AseReader : IAssetReader {
   public T FromStream<T>(Stream stream) where T : class {
-    if (typeof(T) != typeof(AseAsset)) {
+    if (typeof(T) != typeof(AnimSpriteSheet)) {
       throw AssetLoadException.FromInvalidReader<AseReader, T>();
     }
 
@@ -41,12 +40,6 @@ public class AseReader : IAssetReader {
       }
     }
 
-    // Converting it to a sprite sheet looks best for Terraria's cases,
-    // and best for AnimLib, which will benefit from the included AnimationTags
-    AnimSpriteSheet spriteSheet = AnimSpriteSheetProcessor.Process(asepriteFile);
-
-    AseAsset aseAsset = new(asepriteFile, spriteSheet);
-
-    return aseAsset as T;
+    return AnimSpriteSheetProcessor.Process(asepriteFile) as T;
   }
 }
