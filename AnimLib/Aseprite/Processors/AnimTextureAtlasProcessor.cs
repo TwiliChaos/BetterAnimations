@@ -4,7 +4,7 @@ using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Common;
 using AsepriteDotNet.Processors;
-using Rectangle = AsepriteDotNet.Common.Rectangle;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 using Texture = AsepriteDotNet.Texture;
 
 namespace AnimLib.Aseprite.Processors;
@@ -120,19 +120,16 @@ public static class AnimTextureAtlasProcessor {
 
       var imagePixels = new Rgba32[imageSize.Width * imageSize.Height];
 
-      var regions = new TextureRegion[file.Frames.Length];
+      var regions = new Rectangle[file.Frames.Length];
       int offset = 0;
-      var originalToDuplicateLookup = new Dictionary<int, TextureRegion>();
+      var originalToDuplicateLookup = new Dictionary<int, Rectangle>();
 
       for (int i = 0; i < frames.Length; i++) {
         var frame = frames[i];
 
         // Create region for duplicate frame, don't write to texture
         if (options.MergeDuplicateFrames && duplicateMap!.TryGetValue(i, out int value)) {
-          TextureRegion original = originalToDuplicateLookup[value];
-          TextureRegion duplicate = new($"{file.Name} {i}", original.Bounds,
-            ProcessorUtilities.GetSlicesForFrame(i, file.Slices));
-          regions[frame.FrameIndex] = duplicate;
+          regions[frame.FrameIndex] = originalToDuplicateLookup[value];
           offset++;
           continue;
         }
@@ -162,11 +159,8 @@ public static class AnimTextureAtlasProcessor {
         }
 
         Rectangle bounds = new(x, y, frameWidth, frameHeight);
-        // TODO: Check if "ProcessorUtilities.GetSlicesForFrame()" needs modifications to handle upscaling
-        TextureRegion textureRegion =
-          new($"{file.Name} {i}", bounds, ProcessorUtilities.GetSlicesForFrame(frame.FrameIndex, file.Slices));
-        regions[frame.FrameIndex] = textureRegion;
-        originalToDuplicateLookup.Add(i, textureRegion);
+        regions[frame.FrameIndex] = bounds;
+        originalToDuplicateLookup.Add(i, bounds);
       }
 
       Texture aseTexture = new(name, imageSize, imagePixels);
