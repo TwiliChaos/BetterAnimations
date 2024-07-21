@@ -11,10 +11,7 @@ namespace AnimLib.Abilities;
 [PublicAPI]
 public abstract class Ability<TManager> : Ability where TManager : AbilityManager {
   /// <inheritdoc cref="Ability.abilities"/>
-  public new TManager abilities {
-    get => (TManager)base.abilities;
-    internal init => base.abilities = value;
-  }
+  public override TManager abilities => (TManager)base.abilities;
 }
 
 /// <summary>
@@ -22,7 +19,7 @@ public abstract class Ability<TManager> : Ability where TManager : AbilityManage
 /// </summary>
 [PublicAPI]
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-public abstract class Ability {
+public abstract partial class Ability {
   #region Properties - Common
   // Initialized properties that are set by AnimLib are kept in this region.
 
@@ -30,21 +27,17 @@ public abstract class Ability {
   /// The player that this ability belongs to.
   /// </summary>
   // ReSharper disable once NotNullMemberIsNotInitialized
-  [NotNull] public Player player { get; internal set; }
-
-  /// <summary>
-  /// The <see cref="Mod"/> that this ability belongs to.
-  /// </summary>
-  [NotNull] public Mod mod => abilities.mod;
+  [NotNull]
+  public Player player => Entity;
 
   /// <summary>
   /// The <see cref="AbilityManager"/> that this ability belongs to.
   /// </summary>
   // ReSharper disable once NotNullMemberIsNotInitialized
-  [NotNull] public AbilityManager abilities { get; internal set; }
+  [NotNull] public virtual AbilityManager abilities { get; internal set; }
 
   /// <summary>
-  /// <see langword="true"/> if this ability belongs to the client <see cref="Player"/> instance.
+  /// <see langword="true"/> if this ability belongs to the client <see cref="player"/> instance.
   /// </summary>
   public bool IsLocal => player.whoAmI == Main.myPlayer;
   #endregion
@@ -53,12 +46,7 @@ public abstract class Ability {
   // Initialized properties that are set by other mods (virtual or abstract properties) are kept in this region.
 
   /// <summary>
-  /// Whether or not you want this ability to be automatically loaded. This only matters if <see cref="AbilityManager.Autoload"/> is also true.
-  /// </summary>
-  public virtual bool Autoload => mod.ContentAutoloadingEnabled;
-
-  /// <summary>
-  /// Id of the ability. This should be a unique number that is different from other ability types.
+  /// ID of the ability. This should be a unique number that is different from other ability types.
   /// This determines the order that abilities are updated, with the lower value updated first.
   /// Also used to access Abilities through <see cref="AbilityManager.this[int]"> AbilityManager's array accessor </see>.
   /// </summary>
@@ -68,13 +56,13 @@ public abstract class Ability {
   /// <example>
   /// <code>
   /// class MyFunAbility : Ability {
-  ///   public override int Id => AbilityID.MyFunAbility;
-  ///   // omitted for brevity ...
+  ///   public override int ID => AbilityID.MyAbility;
+  ///   // rest of the class ...
   /// }
   ///
   /// static class AbilityID {
-  ///   public static int MyFunAbility => 1;
-  ///   public static int MyOtherFunAbility => 2;
+  ///   public static int MyAbility => 1;
+  ///   public static int MyOtherAbility => 2;
   ///   // More IDs ...
   /// }
   /// </code>
@@ -115,7 +103,7 @@ public abstract class Ability {
   private bool _netUpdate;
 
   /// <summary>
-  /// Whether or not the player has access to this ability. When <see langword="false"/>, the player cannot use this ability.
+  /// Whether the player has access to this ability. When <see langword="false"/>, the player cannot use this ability.
   /// </summary>
   public virtual bool Unlocked => true;
   #endregion
@@ -191,7 +179,7 @@ public abstract class Ability {
   public int cooldownLeft;
 
   /// <summary>
-  /// Whether or not the ability is currently on cooldown.
+  /// Whether the ability is currently on cooldown.
   /// </summary>
   public bool IsOnCooldown { get; private set; }
 
@@ -346,7 +334,7 @@ public abstract class Ability {
   #region Serializing
   /// <summary>
   /// Save data that is specific to this <see cref="Ability"/>.
-  /// By default saves the ability's level, if it implements <see cref="ILevelable"/>.
+  /// By default, saves the ability's level, if it implements <see cref="ILevelable"/>.
   /// </summary>
   /// <returns>A <see cref="TagCompound"/> with data specific to this <see cref="Ability"/>.</returns>
   /// <seealso cref="Load"/>
@@ -363,7 +351,7 @@ public abstract class Ability {
 
   /// <summary>
   /// Load data that is specific to this <see cref="Ability"/>.
-  /// By default loads the ability's level, if it implements <see cref="ILevelable"/>.
+  /// By default, loads the ability's level, if it implements <see cref="ILevelable"/>.
   /// </summary>
   /// <param name="tag">The tag to load ability data from.</param>
   /// <seealso cref="Save"/>
@@ -407,7 +395,7 @@ public abstract class Ability {
     (Cooldown != 0 ? $" Cooldown:{cooldownLeft}/{Cooldown}" : string.Empty);
 
   /// <summary>
-  /// Whether or not the <see cref="Ability"/> is in use.
+  /// Whether the <see cref="Ability"/> is in use.
   /// </summary>
   /// <seealso cref="InUse"/>
   public static implicit operator bool(Ability ability) => ability is not null && ability.InUse;
@@ -426,4 +414,6 @@ internal class __LevelableAbility : Ability, ILevelable {
   }
 
   public int MaxLevel => 0;
+
+  public override bool IsLoadingEnabled(Mod mod) => false;
 }

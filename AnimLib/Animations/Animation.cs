@@ -1,110 +1,96 @@
-﻿using System.Linq;
-using AnimLib.Internal;
-using Terraria.DataStructures;
+﻿using Terraria.DataStructures;
+using Terraria.ID;
 
 namespace AnimLib.Animations;
 
 /// <summary>
 /// Animation for a single player.
-/// This class uses runtime data from a <see cref="AnimationController"/> to retrieve values from an <see cref="AnimationSource"/>.
+/// This class uses runtime data from a <see cref="AnimationController"/> to retrieve values from an <see cref="AnimSpriteSheet"/>.
 /// One of these will be created for each <see cref="AnimationController"/> you have in your mod, per player.
-/// <para>To get an <see cref="Animation"/> instance from the player, use <see cref="AnimationController.GetAnimation{T}"/>.</para>
+/// <para>To get an <see cref="Animation"/> instance from the player, use <see cref="AnimationController.AddAnimation"/>.</para>
 /// </summary>
 /// <remarks>
-/// This class is essentially the glue between your <see cref="AnimationController"/> and all your <see cref="AnimationSource"/>.
+/// This class is essentially the glue between your <see cref="AnimationController"/> and all your <see cref="AnimSpriteSheet"/>.
 /// </remarks>
 [PublicAPI]
 public sealed class Animation {
   /// <summary>
-  /// <see cref="AnimationController"/> this <see cref="Animation"/> belongs to. This is used to get the current <see cref="Track"/>s and
-  /// <see cref="Frame"/>s.
+  /// <see cref="AnimationController"/> this <see cref="Animation"/> belongs to. This is used to get the current <see cref="AnimTag"/>s and
+  /// <see cref="AnimFrame"/>s.
   /// </summary>
   [NotNull] public readonly AnimationController controller;
 
   /// <summary>
-  /// <see cref="AnimationSource"/> database used for this <see cref="Animation"/>.
+  /// <see cref="AnimSpriteSheet"/> info used for this <see cref="Animation"/>.
   /// </summary>
-  [NotNull] public readonly AnimationSource source;
+  [NotNull] public readonly AnimSpriteSheet spriteSheet;
 
   /// <summary>
-  /// Creates a new instance of <see cref="Animation"/> for the given <see cref="AnimPlayer"/>, using the given <see cref="AnimationSource"/> and
+  /// Creates a new instance of <see cref="Animation"/> for the given <see cref="AnimPlayer"/>, using the given <see cref="AnimSpriteSheet"/> and
   /// rendering with <see cref="PlayerDrawLayer"/>.
   /// </summary>
   /// <param name="controller"><see cref="AnimationController"/> instance this will belong to.</param>
-  /// <param name="source"><see cref="AnimationSource"/> to determine which sprite is drawn.</param>
+  /// <param name="spriteSheet"><see cref="AnimSpriteSheet"/> to determine which sprite is drawn.</param>
   /// <exception cref="System.InvalidOperationException">Animation classes are not allowed to be constructed on a server.</exception>
-  internal Animation([NotNull] AnimationController controller, [NotNull] AnimationSource source) {
-    if (!AnimLoader.UseAnimations) throw new InvalidOperationException("Animation classes are not allowed to be constructed on servers.");
+  internal Animation([NotNull] AnimationController controller, [NotNull] AnimSpriteSheet spriteSheet) {
+    if (Main.netMode == NetmodeID.Server) {
+      throw new InvalidOperationException("Animation classes are not allowed to be constructed on servers.");
+    }
+
     this.controller = controller;
-    this.source = source;
-    CheckIfValid(controller.TrackName);
+    this.spriteSheet = spriteSheet;
   }
 
 
   /// <summary>
-  /// Current <see cref="Track"/> that is being played.
+  /// Current <see cref="AnimTag"/> that is being played.
   /// <para>
-  /// If <see cref="AnimationController.TrackName"/> is not a valid track name, this returns the first <see cref="Track"/> in the
-  /// <see cref="AnimationSource"/>.
+  /// If <see cref="AnimationController.TagName"/> is not a valid track name, this returns the first <see cref="AnimTag"/> in the
+  /// <see cref="AnimSpriteSheet"/>.
   /// </para>
   /// </summary>
-  public Track CurrentTrack => Valid ? source.tracks[controller.TrackName] : source.tracks.First().Value;
+  public AnimTag CurrentTag => spriteSheet.TagDictionary[controller.TagName];
 
   /// <summary>
-  /// Current <see cref="Frame"/> that is being played.
-  /// <para>If <see cref="AnimationController.FrameIndex"/> is less than 0, this returns the first <see cref="Frame"/> in the <see cref="Track"/>.</para>
-  /// <para>
-  /// If <see cref="AnimationController.FrameIndex"/> is greater than the <see cref="Track"/> length, this returns the last <see cref="Frame"/>
-  /// in the <see cref="Track"/>.
-  /// </para>
+  /// Current <see cref="AnimFrame"/> that is being played.
   /// </summary>
-  public ref readonly Frame CurrentFrame => ref CurrentTrack.GetClampedFrame(controller.FrameIndex);
+  public AnimFrame CurrentFrame => CurrentTag.Frames[controller.FrameIndex];
 
   /// <summary>
-  /// Current <see cref="Frame"/>'s sprite position and size on the <see cref="CurrentTexture"/>.
+  /// Gets the <see cref="Rectangle"/> that represents the current sprite position and size based on the current
+  /// <see cref="AnimFrame"/> on the provided <see cref="AnimTextureAtlas"/>.
   /// </summary>
-  public Rectangle CurrentTile => CurrentFrame.ToRectangle(source);
+  /// <param name="layer">
+  /// The name of the <see cref="AnimTextureAtlas"/> to get the <see cref="Rectangle"/> from.
+  /// </param>
+  public Rectangle GetRect(string layer) => spriteSheet.GetAtlasRect(layer, CurrentFrame.AtlasFrameIndex);
 
   /// <summary>
-  /// Current <see cref="Texture2D"/> that is to be drawn.
-  /// <para>
-  /// If <see cref="Track.GetTexture(int)"/> is not <see langword="null"/>, that is returned; otherwise, returns the
-  /// <see cref="AnimationSource"/>'s <see cref="Texture2D"/>.
-  /// </para>
+  /// Texture of the <see cref="AnimTextureAtlas"/> whose name matches <param name="layer"/>
   /// </summary>
-  public Texture2D CurrentTexture => CurrentTrack.GetTexture(controller.FrameIndex) ?? source.GetDefaultTexture();
+  /// <param name="layer">
+  /// The name of the <see cref="AnimTextureAtlas"/> to get the <see cref="Texture2D"/> from.
+  /// </param>
+  public Texture2D GetTexture([NotNull] string layer) {
+    ArgumentNullException.ThrowIfNull(layer);
 
-  /// <summary>
-  /// Whether or not the current <see cref="AnimationController.TrackName"/> maps to a valid <see cref="Track"/> on this <see cref="AnimationSource"/>.
-  /// </summary>
-  public bool Valid { get; private set; }
+    var textureAtlasMap = spriteSheet.Atlases;
+    if (!textureAtlasMap.TryGetValue(layer, out AnimTextureAtlas atlas)) {
+      throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
+    }
 
-  /// <summary>
-  /// Gets the sprite position and size of the <see cref="Frame"/> at the given index of the current <see cref="Track"/>.
-  /// If you want to get the rect of the current <see cref="Frame"/>, use <see cref="CurrentTile"/> instead.
-  /// </summary>
-  /// <param name="frameIndex">Index of the frame to get.</param>
-  /// <returns>The <see cref="Rectangle"/> of the <see cref="Frame"/> at the given index.</returns>
-  public Rectangle TileAt(int frameIndex) => TileAt(CurrentTrack, frameIndex);
-
-  /// <summary>
-  /// Gets the sprite position and size of the <see cref="Frame"/> at the given index of the given <see cref="Track"/>.
-  /// If you want to get the rect of the current <see cref="Frame"/>, use <see cref="CurrentTile"/> instead.
-  /// </summary>
-  /// <param name="frameIndex">Index of the frame to get.</param>
-  /// <param name="track">Track that the <paramref name="frameIndex"/> is in.</param>
-  /// <returns>The <see cref="Rectangle"/> of the <see cref="Frame"/> at the given index.</returns>
-  public Rectangle TileAt(Track track, int frameIndex) => track.GetClampedFrame(frameIndex).ToRectangle(source);
+    return atlas.Texture;
+  }
 
 
   /// <summary>
   /// Gets a <see cref="DrawData"/> that is based on this <see cref="Animation"/>.
   /// <list type="bullet">
-  /// <item><see cref="DrawData.texture"/> is <see cref="CurrentTexture"/> (recommended)</item>
+  /// <item><see cref="DrawData.texture"/> is the return value of <see cref="GetTexture"/> (recommended)</item>
   /// <item><see cref="DrawData.position"/> is the center of the <see cref="PlayerDrawSet.drawPlayer"/>, in screen-space. (recommended)</item>
-  /// <item><see cref="DrawData.sourceRect"/> is <see cref="CurrentTile"/> (recommended)</item>
+  /// <item><see cref="DrawData.sourceRect"/> is the return value of <see cref="GetRect"/> (recommended)</item>
   /// <item><see cref="DrawData.rotation"/> is <see cref="Entity.direction"/> <see langword="*"/> <see cref="AnimationController.SpriteRotation"/> (recommended)</item>
-  /// <item><see cref="DrawData.origin"/> is half of <see cref="CurrentTile"/>'s size, plus (5 * <see cref="Player.gravDir"/>) on the Y axis. Feel free to modify this.</item>
+  /// <item><see cref="DrawData.origin"/> is half of <see cref="DrawData.sourceRect"/>'s size</item>
   /// <item><see cref="DrawData.effect"/> is based on <see cref="Entity.direction"/> and <see cref="Player.gravDir"/>. (recommended)</item>
   /// </list>
   /// </summary>
@@ -114,53 +100,16 @@ public sealed class Animation {
   /// If your sprites are not correctly positioned in the world, you may need to tweak <see cref="DrawData.origin"/>.
   /// </remarks>
   /// <param name="drawInfo">Parameter of <see cref="PlayerDrawLayer.Draw(ref PlayerDrawSet)">PlayerDrawLayer.Draw(ref PlayerDrawSet)</see>.</param>
+  /// <param name="layer">Name of the Atlas that the <paramref name="drawInfo"/> will be based on.</param>
   /// <returns>A <see cref="DrawData"/> based on this <see cref="Animation"/>.</returns>
-  public DrawData GetDrawData(PlayerDrawSet drawInfo) {
+  public DrawData GetDrawData(PlayerDrawSet drawInfo, string layer) {
     Player player = drawInfo.drawPlayer;
-    Texture2D texture = CurrentTexture;
+    Texture2D texture = GetTexture(layer);
     Vector2 position = drawInfo.Position - Main.screenPosition + player.Size / 2;
-    Rectangle rect = CurrentTile;
+    Rectangle rect = GetRect(layer);
     SpriteEffects effect = controller.Effects;
-    Vector2 origin = new Vector2(rect.Width / 2f, rect.Height / 2f);
+    Vector2 origin = new(rect.Width / 2f, rect.Height / 2f);
 
     return new DrawData(texture, position, rect, Color.White, controller.SpriteRotation, origin, 1, effect);
   }
-
-  /// <summary>
-  /// Attempts to add the given <see cref="PlayerDrawLayer"/> to <paramref name="layers"/>.
-  /// If <see cref="Valid"/> is <see langword="false"/>, this will do nothing and return <see langword="false"/>.
-  /// </summary>
-  /// <param name="layers">The <see cref="List{T}"/> of <see cref="PlayerDrawLayer"/> to insert in.</param>
-  /// <param name="playerLayer"><see cref="PlayerDrawLayer"/> to use for this <see cref="Animation"/>.</param>
-  /// <returns><see langword="true"/> if <paramref name="playerLayer"/> was inserted; otherwise, <see langword="false"/>.</returns>
-  public bool TryAddToLayers(List<PlayerDrawLayer> layers, PlayerDrawLayer playerLayer) {
-    if (Valid) layers.Add(playerLayer);
-    return Valid;
-  }
-
-  /// <summary>
-  /// Attempts to insert the given <see cref="PlayerDrawLayer"/> to <paramref name="layers"/>. If <see cref="Valid"/> is <see langword="false"/>,
-  /// this will do nothing and return <see langword="false"/>.
-  /// </summary>
-  /// <param name="layers">The <see cref="List{T}"/> of <see cref="PlayerDrawLayer"/> to insert in.</param>
-  /// <param name="playerLayer"><see cref="PlayerDrawLayer"/> to use for this <see cref="Animation"/>.</param>
-  /// <param name="idx">Position to insert the <paramref name="playerLayer"/> into.</param>
-  /// <returns><see langword="true"/> if <paramref name="playerLayer"/> was inserted; otherwise, <see langword="false"/>.</returns>
-  public bool TryAddToLayers(List<PlayerDrawLayer> layers, PlayerDrawLayer playerLayer, int idx) {
-    if (Valid) layers.Insert(idx, playerLayer);
-    return Valid;
-  }
-
-
-  /// <summary>
-  /// Check if <paramref name="name"/> is a valid track, without changing <see cref="Valid"/>.
-  /// </summary>
-  /// <param name="name">Track name to check.</param>
-  internal bool CheckIfValidNoUpdate(string name) => source.tracks.ContainsKey(name);
-
-  /// <summary>
-  /// Updates <see cref="Valid"/> by checking if <paramref name="name"/> is a valid track.
-  /// </summary>
-  /// <param name="name">Track name to check.</param>
-  internal bool CheckIfValid(string name) => Valid = source.tracks.ContainsKey(name);
 }

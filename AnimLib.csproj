@@ -5,7 +5,7 @@
     <AssemblyName>AnimLib</AssemblyName>
     <LangVersion>latest</LangVersion>
 	<Description>Terraria library mod for enhanced animations and ability management.</Description>
-	<RepositoryUrl>https://github.com/TwiliChaos/AnimLib</RepositoryUrl>
+	<RepositoryUrl>https://github.com/Ilemni/AnimLib</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
 	<ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>

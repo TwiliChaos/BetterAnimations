@@ -4,7 +4,7 @@ using AsepriteDotNet.Common;
 using AsepriteDotNet.Processors;
 using Rectangle = AsepriteDotNet.Common.Rectangle;
 
-namespace AnimLib.Aseprite.Processors;
+namespace AnimLib.Animations.Aseprite.Processors;
 
 public static class ProcessorHelper {
   public static Rgba32[][] FlattenFrameToTopLayers(AsepriteFile file, int frameIndex,

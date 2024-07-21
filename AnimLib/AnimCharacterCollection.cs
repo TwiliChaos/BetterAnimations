@@ -1,20 +1,15 @@
 using System.Collections;
-using AnimLib.Internal;
 
 namespace AnimLib;
 
 internal class AnimCharacterCollection : IReadOnlyDictionary<Mod, AnimCharacter> {
-  private readonly CharStack<AnimCharacter> characterStack;
+  private readonly CharStack<AnimCharacter> characterStack = new();
   private AnimCharacter.Priority activePriority;
 
-  internal AnimCharacterCollection(AnimPlayer animPlayer) {
-    if (!AnimLoader.GetLoadedMods(out var mods)) return;
-    foreach (Mod mod in mods) dict[mod] = new AnimCharacter(animPlayer, mod, this);
-
-    characterStack = new CharStack<AnimCharacter>(mods.Count);
+  internal AnimCharacterCollection() {
   }
 
-  internal readonly Dictionary<Mod, AnimCharacter> dict = new();
+  internal readonly Dictionary<Mod, AnimCharacter> dict = [];
   [CanBeNull] public AnimCharacter ActiveCharacter { get; private set; }
 
   public bool ContainsKey(Mod key) => dict.ContainsKey(key);
@@ -76,7 +71,7 @@ internal class AnimCharacterCollection : IReadOnlyDictionary<Mod, AnimCharacter>
 
 internal class CharStack<T> {
   private readonly List<T> items;
-  public CharStack() => items = new List<T>();
+  public CharStack() => items = [];
   public CharStack(int count) => items = new List<T>(count);
 
   public int Count => items.Count;

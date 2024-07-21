@@ -20,11 +20,14 @@ public static class ModPlayerExtensions {
   }
 
   /// <summary>
-  /// Gets a wrapped <see cref="AnimCharacter{T, T}"/> instance that belongs to the <see cref="Mod"/> of <paramref name="modPlayer"/>.
+  /// Gets a wrapped <see cref="AnimCharacterWrapper{T, T}"/> instance that belongs to the <see cref="Mod"/> of <paramref name="modPlayer"/>.
   /// </summary>
   /// <param name="modPlayer">Your <see cref="ModPlayer"/> instance.</param>
-  /// <returns>An <see cref="AnimCharacter{T, T}"/> instance of <paramref name="modPlayer"/> for your <see cref="Mod"/></returns>
-  public static AnimCharacter<TAnimation, TAbility> GetAnimCharacter<TAnimation, TAbility>(this ModPlayer modPlayer)
-    where TAnimation : AnimationController where TAbility : AbilityManager
-    => GetAnimCharacter(modPlayer).As<TAnimation, TAbility>();
+  /// <returns>An <see cref="AnimCharacterWrapper{T, T}"/> instance of <paramref name="modPlayer"/> for your <see cref="Mod"/></returns>
+  public static AnimCharacterWrapper<TAnimation, TAbility> GetAnimCharacter<TAnimation, TAbility>(this ModPlayer modPlayer)
+    where TAnimation : AnimationController where TAbility : AbilityManager {
+    AnimCharacter character = GetAnimCharacter(modPlayer);
+
+    return character.GetWrapped<TAnimation, TAbility>();
+  }
 }

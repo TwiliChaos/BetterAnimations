@@ -7,10 +7,7 @@ using AsepriteDotNet.Processors;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 using Texture = AsepriteDotNet.Texture;
 
-namespace AnimLib.Aseprite.Processors;
-
-using FrameEntry = (int FrameIndex, int RootLayerIndex, Rgba32[] ColorData, bool IsEmpty);
-using LayerEntry = (string LayerName, (int FrameIndex, int RootLayerIndex, Rgba32[] ColorData, bool IsEmpty)[] Frames);
+namespace AnimLib.Animations.Aseprite.Processors;
 
 /// <summary>
 /// Defines a processor for processing multiple <see cref="TextureAtlas"/>es from an <see cref="AsepriteFile"/>,
@@ -51,7 +48,7 @@ public static class AnimTextureAtlasProcessor {
     int frameCount = file.Frames.Length;
     var allFrames = new LayerEntry[rootLayers.Length];
     for (int i = 0; i < rootLayers.Length; i++) {
-      allFrames[i] = (rootLayers[i].Name, new FrameEntry[frameCount]);
+      allFrames[i] = new LayerEntry(rootLayers[i].Name, new FrameEntry[frameCount]);
     }
 
     for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -154,7 +151,7 @@ public static class AnimTextureAtlasProcessor {
             WriteScaledPixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth);
           }
           else {
-            WritePixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth, frameHeight);
+            WritePixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth);
           }
         }
 
@@ -228,11 +225,11 @@ public static class AnimTextureAtlasProcessor {
     return firstData.SequenceEqual(secondData, null);
   }
 
-  private static void WritePixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w, int h) {
+  private static void WritePixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w) {
     int length = pixels.Length;
     for (int p = 0; p < length; p++) {
       int px = x + p % w;
-      int py = y + p / h;
+      int py = y + p / w;
       int index = py * imageWidth + px;
       imagePixels[index] = pixels[p];
     }
@@ -256,3 +253,7 @@ public static class AnimTextureAtlasProcessor {
     }
   }
 }
+
+internal record LayerEntry(string Name, FrameEntry[] Frames);
+
+internal readonly record struct FrameEntry(int FrameIndex, int RootLayerIndex, Rgba32[] ColorData, bool IsEmpty);

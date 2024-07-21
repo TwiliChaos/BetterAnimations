@@ -8,22 +8,22 @@ namespace AnimLib.Abilities;
 
 /// <summary>
 /// Class for containing and updating all <see cref="Ability"> Abilities </see> in a <see cref="Player"/>.
-/// Consider saving data using your mod's modplayer SaveData and obtain abilities TagCompound using Save
+/// Consider saving data using your mod's ModPlayer SaveData and obtain abilities TagCompound using Save
 /// Load ability levels getting the same compound from Save method from LoadData and provide it to
 /// load method to load ability levels and etc
 /// </summary>
 [PublicAPI]
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-public class AbilityManager : IEnumerable<Ability> {
+public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <summary>
   /// Gets the Ability of type <typeparamref name="T"/>.
   /// </summary>
   /// <typeparam name="T">The ability type.</typeparam>
   /// <returns>The <see cref="Ability"/> of type <typeparamref name="T"/>.</returns>
-  /// <exception cref="ArgumentException"><typeparamref name="T"/> does not belong to this <see cref="mod"/></exception>
+  /// <exception cref="ArgumentException"><typeparamref name="T"/> does not belong to this <see cref="Mod"/></exception>
   public T Get<T>() where T : Ability =>
     (T)abilityArray.FirstOrDefault(a => a is T)
-    ?? throw new ArgumentException($"{typeof(T).Name} does not belong to {mod}");
+    ?? throw new ArgumentException($"{typeof(T).Name} does not belong to {Mod}");
 
   #region Properties - Common
   // Initialized properties that are set by other mods (virtual or abstract properties) are kept in this region.
@@ -37,14 +37,13 @@ public class AbilityManager : IEnumerable<Ability> {
   /// <summary>
   /// The <see cref="Player"/> that this <see cref="AbilityManager"/> belongs to.
   /// </summary>
-  [NotNull] public Player player { get; internal set; }
+  [NotNull]
+  public Player player => Entity;
 
-  [NotNull] internal AnimPlayer animPlayer { get; set; }
+  [NotNull]
+  internal AnimPlayer animPlayer => _animPlayer ??= player.GetModPlayer<AnimPlayer>();
+  private AnimPlayer _animPlayer;
 
-  /// <summary>
-  /// The <see cref="Mod"/> that this <see cref="AbilityManager"/> belongs to.
-  /// </summary>
-  [NotNull] public Mod mod { get; internal set; }
   // ReSharper restore NotNullMemberIsNotInitialized
 
   /// <summary>
@@ -85,18 +84,7 @@ public class AbilityManager : IEnumerable<Ability> {
 
   #region Properties - Mod-defined (Get-only properties defined by mods that should not change)
   /// <summary>
-  /// Whether or not to automatically load abilities onto this mod.
-  /// <para>
-  /// When <see langword="true"/>, <see cref="AnimLibMod"/> will create all abilities in your mod
-  /// that have <see cref="Ability.Autoload"/> as <see landword="true"/>.
-  /// </para>
-  /// <para>Set to false if you wish to construct all abilities yourself.</para>
-  /// <para>By default this returns the mod's autoload property.</para>
-  /// </summary>
-  public virtual bool Autoload => mod.ContentAutoloadingEnabled;
-
-  /// <summary>
-  /// Whether or not to automatically save ability data during <see cref="ModPlayer.SaveData"/>.
+  /// Whether to automatically save ability data during <see cref="ModPlayer.SaveData"/>.
   /// If <see langword="true"/>, this will save ability data in <see cref="AnimLibMod"/>.
   /// Set to <see langword="false"/> if you wish to save ability data in your own mod.
   /// </summary>
@@ -106,7 +94,7 @@ public class AbilityManager : IEnumerable<Ability> {
 
   #region Properties - Runtime (Properties expected to change throughout the ability manager's lifespan)
   /// <summary>
-  /// Whether or not this ability needs to be synced.
+  /// Whether this ability needs to be synced.
   /// </summary>
   public bool netUpdate {
     get => _netUpdate;
@@ -128,7 +116,7 @@ public class AbilityManager : IEnumerable<Ability> {
   /// in order to block their work, when <see cref="AnimCharacter"/>
   /// with this <see cref="Animations.AnimationController"/> is active.
   /// </summary>
-  public readonly HashSet<string> AnimCompatSystemBlocklist = new();
+  public readonly HashSet<string> AnimCompatSystemBlocklist = [];
   #endregion
 
   #region Methods - Mod-defined
@@ -232,7 +220,7 @@ public class AbilityManager : IEnumerable<Ability> {
   /// </summary>
   /// <returns>An instance of <see cref="TagCompound"/> containing <see cref="Ability"/> save data.</returns>
   public TagCompound Save() {
-    TagCompound tag = new();
+    TagCompound tag = [];
     foreach (Ability ability in this) {
       TagCompound abilityTag = ability.Save();
       if (abilityTag is null) continue;

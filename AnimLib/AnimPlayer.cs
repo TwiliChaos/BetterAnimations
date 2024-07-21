@@ -1,5 +1,6 @@
 using AnimLib.Abilities;
 using AnimLib.Animations;
+using AnimLib.Internal;
 using AnimLib.Networking;
 using Terraria.ModLoader.IO;
 
@@ -15,15 +16,14 @@ public sealed class AnimPlayer : ModPlayer {
   /// </summary>
   public TagCompound OldAbilities { get; internal set; }
 
-  [Obsolete]
-  private const string AllAbilityTagKey = "abilities";
+  [Obsolete] private const string AllAbilityTagKey = "abilities";
 
   private static AnimPlayer _local;
 
   private bool _abilityNetUpdate;
 
   internal AnimCharacterCollection characters =>
-    _characters ??= new AnimCharacterCollection(this);
+    _characters ??= AnimLoader.SetupCharacterCollection(this);
   private AnimCharacterCollection _characters;
 
   internal static AnimPlayer Local {
@@ -41,7 +41,8 @@ public sealed class AnimPlayer : ModPlayer {
   /// <summary>
   /// The current active <see cref="AnimCharacter"/>.
   /// </summary>
-  [CanBeNull] private AnimCharacter ActiveCharacter => characters.ActiveCharacter;
+  [CanBeNull]
+  private AnimCharacter ActiveCharacter => characters.ActiveCharacter;
 
   /// <summary>
   /// Whether any <see cref="AnimCharacter"/>s need to be net-synced.<br />
@@ -65,11 +66,6 @@ public sealed class AnimPlayer : ModPlayer {
   }
 
   internal bool DebugEnabled { get; set; }
-
-  /// <summary>
-  /// Constructs and collects all <see cref="AnimationController"/>s across all mods onto this <see cref="Player"/>.
-  /// </summary>
-  public override void Initialize() => _characters = new AnimCharacterCollection(this);
 
   /// <inheritdoc/>
   public override void SendClientChanges(ModPlayer clientPlayer) {
@@ -103,9 +99,9 @@ public sealed class AnimPlayer : ModPlayer {
   /// </remarks>
   /// <seealso cref="AbilityManager.AutoSave">AbilityManager.AutoSave</seealso>
   [Obsolete]
-  public override void SaveData(TagCompound tag) {/* tModPorter Suggestion: Edit tag parameter instead of returning new TagCompound */
-    if ((OldAbilities?.Count ?? 0) > 0)
-    {
+  public override void SaveData(TagCompound tag) {
+    /* tModPorter Suggestion: Edit tag parameter instead of returning new TagCompound */
+    if ((OldAbilities?.Count ?? 0) > 0) {
       tag[AllAbilityTagKey] = OldAbilities;
     }
   }
@@ -120,7 +116,7 @@ public sealed class AnimPlayer : ModPlayer {
   /// </remarks>
   [Obsolete]
   public override void LoadData(TagCompound tag) {
-    if(tag.ContainsKey(AllAbilityTagKey))
+    if (tag.ContainsKey(AllAbilityTagKey))
       OldAbilities = tag.GetCompound(AllAbilityTagKey);
   }
 }

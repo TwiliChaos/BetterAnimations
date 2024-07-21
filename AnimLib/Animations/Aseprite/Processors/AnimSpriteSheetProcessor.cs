@@ -1,9 +1,8 @@
-﻿using AsepriteDotNet;
-using AsepriteDotNet.Aseprite;
+﻿using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Processors;
 
-namespace AnimLib.Aseprite.Processors;
+namespace AnimLib.Animations.Aseprite.Processors;
 
 /// <summary>
 /// Defines a processor for processing an <see cref="AnimLibMod"/> <see cref="AnimSpriteSheet"/> from an <see cref="AsepriteFile"/>.
@@ -22,7 +21,7 @@ public static class AnimSpriteSheetProcessor {
 
     var fileTags = file.Tags;
 
-    var tags = new AnimationTag[fileTags.Length];
+    var tags = new AnimTag[fileTags.Length];
     var tagHashes = fileTags.Length < 256 ? stackalloc int[fileTags.Length] : new int[fileTags.Length];
     for (int i = 0; i < tagHashes.Length; i++) {
       tagHashes[i] = 0;
@@ -38,7 +37,7 @@ public static class AnimSpriteSheetProcessor {
 
       tagHashes[i] = hash;
 
-      tags[i] = SpriteSheetProcessor.ProcessTag(aseTag, file.Frames);
+      tags[i] = AnimTag.FromAse(SpriteSheetProcessor.ProcessTag(aseTag, file.Frames));
     }
 
     var textureAtlases = AnimTextureAtlasProcessor.Process(file, options);

@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Text;
-using AnimLib.Aseprite;
+using AnimLib.Animations.Aseprite;
 using AsepriteDotNet.Common;
 using ReLogic.Content.Sources;
 using ReLogic.Utilities;

@@ -9,15 +9,15 @@ namespace AnimLib.Compat.Implementations;
 /// sprite is active
 /// </summary>
 public class PlayerHidingMount : AnimCompatSystem {
-  public readonly List<int> mount_ids = new() { MountID.Wolf };
+  public readonly List<int> mount_ids = [MountID.Wolf];
 
   public override void PostSetupContent() {
-    (string modName, string[] mounts)[] modMounts = {
-      ("MountAndJourney", new[] {
+    (string modName, string[] mounts)[] modMounts = [
+      ("MountAndJourney", [
         "MAJ_SquirrelTransformation",
         "MAJ_ArcticFoxTransformation"
-      })
-    };
+      ])
+    ];
 
     foreach ((string modName, string[] mounts) in modMounts) {
       if (ModLoader.Mods.All(x => x.Name != modName))

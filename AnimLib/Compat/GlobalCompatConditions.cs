@@ -9,13 +9,13 @@ public static class GlobalCompatConditions {
   /// should be disabled, contains conditions, if any return true,
   /// associated flag is turned to false, if none - to true
   /// </summary>
-  [NotNull] private static readonly List<Predicate<Player>> _disableGraphicsOrPredicates = new();
+  [NotNull] private static readonly List<Predicate<Player>> _disableGraphicsOrPredicates = [];
 
   /// <summary>
   /// The <see cref="Predicate{Player}"/> list to determine if
   /// animations updates should be disabled
   /// </summary>
-  [NotNull] private static readonly List<Predicate<Player>> _disableAnimationsUpdating = new();
+  [NotNull] private static readonly List<Predicate<Player>> _disableAnimationsUpdating = [];
 
   /// <summary>
   /// Evaluates conditions of <see cref="_disableGraphicsOrPredicates"/>
