@@ -7,12 +7,12 @@ namespace AnimLib.Networking;
 /// </summary>
 internal class ModNetHandler : SingleInstance<ModNetHandler> {
   /// <summary>
-  /// Type for <see cref="AbilityPacketHandler"/>.
+  /// Type for <see cref="Networking.AbilityPacketHandler"/>.
   /// </summary>
   private const byte AbilityState = 1;
 
-  /// <inheritdoc cref="AbilityPacketHandler"/>
-  internal readonly AbilityPacketHandler abilityPacketHandler = new(AbilityState);
+  /// <inheritdoc cref="Networking.AbilityPacketHandler"/>
+  internal readonly AbilityPacketHandler AbilityPacketHandler = new(AbilityState);
 
   private ModNetHandler() { }
 
@@ -25,7 +25,7 @@ internal class ModNetHandler : SingleInstance<ModNetHandler> {
     byte packetClass = reader.ReadByte();
     switch (packetClass) {
       case AbilityState:
-        abilityPacketHandler.HandlePacket(reader, fromWho);
+        AbilityPacketHandler.HandlePacket(reader, fromWho);
         break;
       default:
         Log.Warn($"Unknown Packet {packetClass}");

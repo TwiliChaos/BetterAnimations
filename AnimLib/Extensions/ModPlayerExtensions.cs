@@ -16,7 +16,7 @@ public static class ModPlayerExtensions {
   [NotNull]
   public static AnimCharacter GetAnimCharacter(this ModPlayer modPlayer) {
     AnimPlayer animPlayer = modPlayer.Player.GetModPlayer<AnimPlayer>();
-    return animPlayer.characters.TryGetValue(modPlayer.Mod, out AnimCharacter c) ? c : throw ThrowHelper.NoType(modPlayer.Mod);
+    return animPlayer.Characters.TryGetValue(modPlayer.Mod, out AnimCharacter c) ? c : throw ThrowHelper.NoType(modPlayer.Mod);
   }
 
   /// <summary>

@@ -16,7 +16,7 @@ internal class MetroidModMorphBallCompat : AnimCompatSystem {
         GetStandardPredicate(
           p => ballLayer.GetDefaultVisibility(new PlayerDrawSet { drawPlayer = p })
         ));
-      _initialized = true;
+      Initialized = true;
     }
     else {
       Log.Warn($"{Name} compat subsystem is unable to start, " +

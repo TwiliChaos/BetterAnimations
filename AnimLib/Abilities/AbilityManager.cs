@@ -7,7 +7,7 @@ using NotNull = JetBrains.Annotations.NotNullAttribute;
 namespace AnimLib.Abilities;
 
 /// <summary>
-/// Class for containing and updating all <see cref="Ability"> Abilities </see> in a <see cref="Player"/>.
+/// Class for containing and updating all <see cref="Ability"> Abilities </see> in a <see cref="Terraria.Player"/>.
 /// Consider saving data using your mod's ModPlayer SaveData and obtain abilities TagCompound using Save
 /// Load ability levels getting the same compound from Save method from LoadData and provide it to
 /// load method to load ability levels and etc
@@ -22,7 +22,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <returns>The <see cref="Ability"/> of type <typeparamref name="T"/>.</returns>
   /// <exception cref="ArgumentException"><typeparamref name="T"/> does not belong to this <see cref="Mod"/></exception>
   public T Get<T>() where T : Ability =>
-    (T)abilityArray.FirstOrDefault(a => a is T)
+    (T)AbilityArray.FirstOrDefault(a => a is T)
     ?? throw new ArgumentException($"{typeof(T).Name} does not belong to {Mod}");
 
   #region Properties - Common
@@ -32,16 +32,16 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <summary>
   /// Array of <see cref="Ability"> Abilities </see> in this <see cref="AbilityManager"/>.
   /// </summary>
-  [NotNull] protected internal Ability[] abilityArray;
+  [NotNull] protected internal Ability[] AbilityArray;
 
   /// <summary>
-  /// The <see cref="Player"/> that this <see cref="AbilityManager"/> belongs to.
+  /// The <see cref="Terraria.Player"/> that this <see cref="AbilityManager"/> belongs to.
   /// </summary>
   [NotNull]
-  public Player player => Entity;
+  public Player Player => Entity;
 
   [NotNull]
-  internal AnimPlayer animPlayer => _animPlayer ??= player.GetModPlayer<AnimPlayer>();
+  internal AnimPlayer AnimPlayer => _animPlayer ??= Player.GetModPlayer<AnimPlayer>();
   private AnimPlayer _animPlayer;
 
   // ReSharper restore NotNullMemberIsNotInitialized
@@ -53,7 +53,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <returns>An <see cref="Ability"/> with the matching <see cref="Ability.Id"/>.</returns>
   /// <exception cref="System.ArgumentOutOfRangeException">The value does not match any <see cref="Ability.Id"/>.</exception>
   [NotNull] public Ability this[int id] =>
-    abilityArray.FirstOrDefault(a => a.Id == id)
+    AbilityArray.FirstOrDefault(a => a.Id == id)
     ?? throw new ArgumentOutOfRangeException($"No ability matches {id}");
 
   /// <summary>
@@ -66,13 +66,13 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// otherwise, <see langword="null"/>.
   /// </param>
   /// <returns><see langword="true"/> if an <see cref="Ability"/> has an <see cref="Ability.Id"/> matching <paramref name="key"/>; otherwise, <see langword="false"/>.</returns>
-  public bool TryGet(int key, [NotNullWhen(true)] out Ability ability) => (ability = abilityArray.FirstOrDefault(a => a.Id == key)) != null;
+  public bool TryGet(int key, [NotNullWhen(true)] out Ability ability) => (ability = AbilityArray.FirstOrDefault(a => a.Id == key)) != null;
 
   /// <summary>
   /// Returns an enumerator that iterates through all <see cref="Ability"/> instances in this <see cref="AbilityManager"/>.
   /// </summary>
   /// <returns></returns>
-  public IEnumerator<Ability> GetEnumerator() => ((IEnumerable<Ability>)abilityArray).GetEnumerator();
+  public IEnumerator<Ability> GetEnumerator() => ((IEnumerable<Ability>)AbilityArray).GetEnumerator();
 
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -96,15 +96,15 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <summary>
   /// Whether this ability needs to be synced.
   /// </summary>
-  public bool netUpdate {
+  public bool NetUpdate {
     get => _netUpdate;
     set {
       _netUpdate = value;
       if (value) // Propagate true netUpdate upstream
-        animPlayer.abilityNetUpdate = true;
+        AnimPlayer.AbilityNetUpdate = true;
       else {
         // Propagate false netUpdate downstream
-        foreach (Ability ability in this) ability.netUpdate = false;
+        foreach (Ability ability in this) ability.NetUpdate = false;
       }
     }
   }
@@ -133,7 +133,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <para>Used to disable all abilities.</para>
   /// </summary>
   /// <returns><see langword="true"/> if any ability can be used; otherwise, <see langword="false"/>.</returns>
-  public virtual bool CanUseAnyAbilities() => !player.dead;
+  public virtual bool CanUseAnyAbilities() => !Player.dead;
   #endregion
 
   #region Update logic
@@ -153,7 +153,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <para>
   /// Calls <see cref="Ability.PreUpdate"/>, <see cref="Ability.Update"/>, and
   /// <see cref="Ability.PostUpdateAbilities"/> on all unlocked abilities.
-  /// Responsible for <see cref="Ability.stateTime"/> and <see cref="Ability.cooldownLeft"/> ticking.
+  /// Responsible for <see cref="Ability.StateTime"/> and <see cref="Ability.CooldownLeft"/> ticking.
   /// </para>
   /// </summary>
   internal void Update() {
@@ -166,7 +166,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
 
     // PreUpdate
     foreach (Ability ability in UnlockedAbilities) {
-      ability.stateTime++;
+      ability.StateTime++;
       if (ability.Inactive)
         ability.UpdateCooldown();
       ability.PreUpdate();

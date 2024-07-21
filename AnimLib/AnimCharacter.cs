@@ -18,8 +18,8 @@ public class AnimCharacterWrapper<TAnimation, TAbility>
 
   public readonly AnimCharacter Character;
 
-  public TAnimation AnimationController => Character.animationController as TAnimation;
-  public TAbility AbilityManager => Character.abilityManager as TAbility;
+  public TAnimation AnimationController => Character.AnimationController as TAnimation;
+  public TAbility AbilityManager => Character.AbilityManager as TAbility;
 }
 
 public class AnimCharacter {
@@ -56,36 +56,36 @@ public class AnimCharacter {
   }
 
   internal AnimCharacter(Mod mod, AnimCharacterCollection characters) {
-    this.mod = mod;
-    this.characters = characters;
+    Mod = mod;
+    Characters = characters;
   }
 
   /// <summary>
-  /// The <see cref="Mod"/> that this <see cref="AnimCharacter"/> instance belongs to.
+  /// The <see cref="Terraria.ModLoader.Mod"/> that this <see cref="AnimCharacter"/> instance belongs to.
   /// </summary>
   [NotNull]
-  public Mod mod { get; }
+  public Mod Mod { get; }
 
   /// <summary>
-  /// The <see cref="AnimationController"/> of this character.
+  /// The <see cref="Animations.AnimationController"/> of this character.
   /// <para/>
-  /// This value is your type of <see cref="AnimationController"/> if your mod has a type inheriting <see cref="AnimationController"/>;
+  /// This value is your type of <see cref="Animations.AnimationController"/> if your mod has a type inheriting <see cref="Animations.AnimationController"/>;
   /// otherwise, it is <see langword="null"/>.
   /// </summary>
   [CanBeNull]
-  public AnimationController animationController { get; internal init; }
+  public AnimationController AnimationController { get; internal init; }
 
   /// <summary>
-  /// The <see cref="AbilityManager"/> of this character.
+  /// The <see cref="Abilities.AbilityManager"/> of this character.
   /// This value is <see langword="null"/> if your mod does not have any types inheriting types in the <see cref="AnimLib.Abilities"/> namespace.
-  /// This value is your type of <see cref="AbilityManager"/> if your mod has a type inheriting <see cref="AbilityManager"/>;
-  /// otherwise, it is <see cref="AnimLib"/>'s type <see cref="AbilityManager"/>.
+  /// This value is your type of <see cref="Abilities.AbilityManager"/> if your mod has a type inheriting <see cref="Abilities.AbilityManager"/>;
+  /// otherwise, it is <see cref="AnimLib"/>'s type <see cref="Abilities.AbilityManager"/>.
   /// </summary>
   [CanBeNull]
-  public AbilityManager abilityManager { get; internal init; }
+  public AbilityManager AbilityManager { get; internal init; }
 
   [NotNull]
-  internal AnimCharacterCollection characters { get; }
+  internal AnimCharacterCollection Characters { get; }
 
 
   /// <summary>
@@ -105,12 +105,12 @@ public class AnimCharacter {
   /// </summary>
   /// <seealso cref="TryEnable"/>
   /// <seealso cref="IsEnabled"/>
-  public bool IsActive => IsEnabled && ReferenceEquals(this, characters.ActiveCharacter);
+  public bool IsActive => IsEnabled && ReferenceEquals(this, Characters.ActiveCharacter);
 
   /// <summary>
   /// The way that the character was enabled by the player.
   /// </summary>
-  public Priority currentPriority { get; private set; }
+  public Priority CurrentPriority { get; private set; }
 
   /// <summary>
   /// Returns a value representing whether you are able to enable the character at this time.
@@ -118,7 +118,7 @@ public class AnimCharacter {
   /// </summary>
   /// <param name="priority">The priority you would be using.</param>
   /// <returns></returns>
-  public bool CanEnable(Priority priority) => characters.CanEnable(priority);
+  public bool CanEnable(Priority priority) => Characters.CanEnable(priority);
 
   /// <summary>
   /// Attempt to enable your character. Note that you may not be able to enable your character
@@ -128,13 +128,13 @@ public class AnimCharacter {
   /// <returns></returns>
   public bool TryEnable(Priority priority = Priority.Default) {
     if (!CanEnable(priority)) return false;
-    characters.Enable(this, priority);
+    Characters.Enable(this, priority);
     return true;
   }
 
   internal void Enable(Priority priority = Priority.Default) {
     IsEnabled = true;
-    currentPriority = priority;
+    CurrentPriority = priority;
     OnEnable?.Invoke();
   }
 
@@ -143,7 +143,7 @@ public class AnimCharacter {
   /// </summary>
   public bool TryDisable() {
     if (!IsEnabled) return false;
-    characters.Disable(this);
+    Characters.Disable(this);
     return true;
   }
 
@@ -163,35 +163,35 @@ public class AnimCharacter {
   public event Action OnDisable;
 
   internal void Update() {
-    animationController?.UpdateConditions();
-    abilityManager?.Update();
+    AnimationController?.UpdateConditions();
+    AbilityManager?.Update();
   }
 
   internal void PostUpdate() {
-    if (abilityManager is not null) {
+    if (AbilityManager is not null) {
       try {
-        abilityManager.PostUpdate();
+        AbilityManager.PostUpdate();
       }
       catch (Exception ex) {
-        Log.Error($"[{abilityManager.Mod.Name}:{abilityManager.GetType().UniqueTypeName()}]: Caught exception.", ex);
-        Main.NewText($"AnimLib -> {abilityManager.Mod.Name}: Caught exception while updating abilities. See client.log for more information.", Color.Red);
+        Log.Error($"[{AbilityManager.Mod.Name}:{AbilityManager.GetType().UniqueTypeName()}]: Caught exception.", ex);
+        Main.NewText($"AnimLib -> {AbilityManager.Mod.Name}: Caught exception while updating abilities. See client.log for more information.", Color.Red);
       }
     }
 
-    if (animationController is not null) {
+    if (AnimationController is not null) {
       try {
-        if (animationController.PreUpdate()) {
-          var options = animationController.Update();
+        if (AnimationController.PreUpdate()) {
+          var options = AnimationController.Update();
           if (options.TagName is not null) {
-            animationController.UpdateAnimation(options);
+            AnimationController.UpdateAnimation(options);
           }
         }
       }
       catch (Exception ex) {
-        Log.Error($"[{animationController.Mod.Name}:{animationController.GetType().UniqueTypeName()}]: Caught exception.", ex);
-        Main.NewText($"AnimLib -> {animationController.Mod.Name}: Caught exception while updating animations. See client.log for more information.", Color.Red);
+        Log.Error($"[{AnimationController.Mod.Name}:{AnimationController.GetType().UniqueTypeName()}]: Caught exception.", ex);
+        Main.NewText($"AnimLib -> {AnimationController.Mod.Name}: Caught exception while updating animations. See client.log for more information.", Color.Red);
       }
-      animationController.UpdateConditionsPost();
+      AnimationController.UpdateConditionsPost();
     }
   }
 
@@ -199,19 +199,19 @@ public class AnimCharacter {
   /// <summary>
   /// Creates an instance of AnimCharacterWrapper using the provided types as members.
   /// </summary>
-  /// <typeparam name="TAnimation">Your type of <see cref="AnimationController"/></typeparam>
-  /// <typeparam name="TAbility">Your type of <see cref="AbilityManager"/></typeparam>
+  /// <typeparam name="TAnimation">Your type of <see cref="Animations.AnimationController"/></typeparam>
+  /// <typeparam name="TAbility">Your type of <see cref="Abilities.AbilityManager"/></typeparam>
   public AnimCharacterWrapper<TAnimation, TAbility> GetWrapped<TAnimation, TAbility>()
     where TAnimation : AnimationController where TAbility : AbilityManager {
-    if (animationController is not null and not TAnimation) {
+    if (AnimationController is not null and not TAnimation) {
       throw new ArgumentException(
-        $"Type parameter {typeof(TAnimation)} does not match member type {animationController.GetType()}",
+        $"Type parameter {typeof(TAnimation)} does not match member type {AnimationController.GetType()}",
         nameof(TAnimation));
     }
 
-    if (abilityManager is not null and not TAbility) {
+    if (AbilityManager is not null and not TAbility) {
       throw new ArgumentException(
-        $"Type parameter {typeof(TAbility)} does not match member type {abilityManager.GetType()}", nameof(TAbility));
+        $"Type parameter {typeof(TAbility)} does not match member type {AbilityManager.GetType()}", nameof(TAbility));
     }
 
     return new AnimCharacterWrapper<TAnimation, TAbility>(this);

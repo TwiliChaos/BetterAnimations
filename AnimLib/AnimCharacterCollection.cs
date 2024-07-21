@@ -3,36 +3,36 @@ using System.Collections;
 namespace AnimLib;
 
 internal class AnimCharacterCollection : IReadOnlyDictionary<Mod, AnimCharacter> {
-  private readonly CharStack<AnimCharacter> characterStack = new();
-  private AnimCharacter.Priority activePriority;
+  private readonly CharStack<AnimCharacter> _characterStack = new();
+  private AnimCharacter.Priority _activePriority;
 
   internal AnimCharacterCollection() {
   }
 
-  internal readonly Dictionary<Mod, AnimCharacter> dict = [];
+  internal readonly Dictionary<Mod, AnimCharacter> Dict = [];
   [CanBeNull] public AnimCharacter ActiveCharacter { get; private set; }
 
-  public bool ContainsKey(Mod key) => dict.ContainsKey(key);
-  public bool TryGetValue(Mod key, out AnimCharacter value) => dict.TryGetValue(key, out value);
+  public bool ContainsKey(Mod key) => Dict.ContainsKey(key);
+  public bool TryGetValue(Mod key, out AnimCharacter value) => Dict.TryGetValue(key, out value);
 
-  public AnimCharacter this[Mod mod] => dict[mod];
+  public AnimCharacter this[Mod mod] => Dict[mod];
 
-  public IEnumerable<Mod> Keys => dict.Keys;
-  public IEnumerable<AnimCharacter> Values => dict.Values;
+  public IEnumerable<Mod> Keys => Dict.Keys;
+  public IEnumerable<AnimCharacter> Values => Dict.Values;
 
 
-  public IEnumerator<KeyValuePair<Mod, AnimCharacter>> GetEnumerator() => dict.GetEnumerator();
+  public IEnumerator<KeyValuePair<Mod, AnimCharacter>> GetEnumerator() => Dict.GetEnumerator();
 
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-  public int Count => dict.Count;
+  public int Count => Dict.Count;
 
   public bool CanEnable(AnimCharacter.Priority priority = AnimCharacter.Priority.Default) {
     if (ActiveCharacter == null) return true;
-    return activePriority switch
+    return _activePriority switch
     {
       AnimCharacter.Priority.Lowest => true,
-      _ => priority > activePriority,
+      _ => priority > _activePriority,
     };
   }
 
@@ -47,15 +47,15 @@ internal class AnimCharacterCollection : IReadOnlyDictionary<Mod, AnimCharacter>
     if (previous is not null) {
       previous.Disable();
       // Set stack position of previous active char to most recent.
-      characterStack.TryRemove(previous);
-      characterStack.Push(previous);
+      _characterStack.TryRemove(previous);
+      _characterStack.Push(previous);
     }
 
 
     ActiveCharacter = character;
-    characterStack.TryRemove(character);
+    _characterStack.TryRemove(character);
     ActiveCharacter.Enable();
-    activePriority = priority;
+    _activePriority = priority;
   }
 
   /// <summary>
@@ -64,41 +64,41 @@ internal class AnimCharacterCollection : IReadOnlyDictionary<Mod, AnimCharacter>
   /// </summary>
   /// <param name="character">The <see cref="AnimCharacter"/> to disable.</param>
   internal void Disable([NotNull] AnimCharacter character) {
-    characterStack.TryRemove(character);
-    if (character == ActiveCharacter) ActiveCharacter = characterStack.Pop();
+    _characterStack.TryRemove(character);
+    if (character == ActiveCharacter) ActiveCharacter = _characterStack.Pop();
   }
 }
 
 internal class CharStack<T> {
-  private readonly List<T> items;
-  public CharStack() => items = [];
-  public CharStack(int count) => items = new List<T>(count);
+  private readonly List<T> _items;
+  public CharStack() => _items = [];
+  public CharStack(int count) => _items = new List<T>(count);
 
-  public int Count => items.Count;
+  public int Count => _items.Count;
 
   public void Push([NotNull] T item) {
     ArgumentNullException.ThrowIfNull(item);
-    items.Add(item);
+    _items.Add(item);
   }
 
   [CanBeNull]
   public T Pop() {
-    if (items.Count <= 0) return default;
-    T temp = items[^1];
-    items.RemoveAt(items.Count - 1);
+    if (_items.Count <= 0) return default;
+    T temp = _items[^1];
+    _items.RemoveAt(_items.Count - 1);
     return temp;
   }
 
   public bool Contains([NotNull] T item) {
     ArgumentNullException.ThrowIfNull(item);
-    return items.IndexOf(item) >= 0;
+    return _items.IndexOf(item) >= 0;
   }
 
-  public void Remove(int itemAtPosition) => items.RemoveAt(itemAtPosition);
+  public void Remove(int itemAtPosition) => _items.RemoveAt(itemAtPosition);
 
   public void TryRemove([NotNull] T item) {
     ArgumentNullException.ThrowIfNull(item);
-    int index = items.IndexOf(item);
+    int index = _items.IndexOf(item);
     if (index >= 0) Remove(index);
   }
 }

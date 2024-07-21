@@ -26,20 +26,20 @@ internal class AbilityPacketHandler : PacketHandler {
     int modCount = reader.ReadLowestCast(ModNet.NetModCount);
     for (int i = 0; i < modCount; i++) {
       Mod mod = ModLoader.GetMod(reader.ReadString());
-      AbilityManager manager = fromPlayer.characters[mod].abilityManager;
+      AbilityManager manager = fromPlayer.Characters[mod].AbilityManager;
       if (manager is null) continue;
-      int abilityCount = reader.ReadLowestCast(manager.abilityArray.Length);
+      int abilityCount = reader.ReadLowestCast(manager.AbilityArray.Length);
       for (int j = 0; j < abilityCount; j++) {
-        int abilityId = reader.ReadLowestCast(manager.abilityArray.Length);
+        int abilityId = reader.ReadLowestCast(manager.AbilityArray.Length);
         Ability ability = manager[abilityId];
         ability.PreReadPacket(reader);
-        if(Main.netMode == NetmodeID.Server) ability.netUpdate = true;
+        if(Main.netMode == NetmodeID.Server) ability.NetUpdate = true;
       }
     }
 
     if (Main.netMode == NetmodeID.Server) {
       SendPacket(-1, fromWho);
-      fromPlayer.abilityNetUpdate = false;
+      fromPlayer.AbilityNetUpdate = false;
     }
   }
 
@@ -47,17 +47,17 @@ internal class AbilityPacketHandler : PacketHandler {
     ModPacket packet = GetPacket(fromWho);
     AnimPlayer fromPlayer = Main.player[fromWho].GetModPlayer<AnimPlayer>();
 
-    var modsToUpdate = (from pair in fromPlayer.characters.dict
-      where pair.Value.abilityManager?.netUpdate ?? false
+    var modsToUpdate = (from pair in fromPlayer.Characters.Dict
+      where pair.Value.AbilityManager?.NetUpdate ?? false
       select pair).ToList();
 
     packet.WriteLowestCast(modsToUpdate.Count, ModNet.NetModCount);
 
     foreach ((Mod mod, AnimCharacter character) in modsToUpdate) {
       packet.Write(mod.Name);
-      var abilities = character.abilityManager?.abilityArray;
+      var abilities = character.AbilityManager?.AbilityArray;
       var abilitiesToUpdate = (from a in abilities
-        where a.netUpdate
+        where a.NetUpdate
         select a).ToList();
 
       if (abilities is null) {

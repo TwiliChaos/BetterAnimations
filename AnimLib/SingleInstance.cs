@@ -8,7 +8,7 @@ namespace AnimLib;
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract class SingleInstance<T> where T : SingleInstance<T> {
   // ReSharper disable once StaticMemberInGenericType
-  private static readonly object _lock = new();
+  private static readonly object Lock = new();
   private static T _instance;
 
   /// <summary>
@@ -27,7 +27,7 @@ public abstract class SingleInstance<T> where T : SingleInstance<T> {
   /// <returns>The value of <see cref="Instance"/>.</returns>
   public static T Initialize() {
     if (_instance is not null) return _instance;
-    lock (_lock) {
+    lock (Lock) {
       if (_instance is not null) return _instance;
       _instance = (T)Activator.CreateInstance(typeof(T), true);
       AnimLibMod.OnUnload += Unload;

@@ -10,8 +10,8 @@ namespace AnimLib.Abilities;
 /// <typeparam name="TManager">Type of manager you wish to use.</typeparam>
 [PublicAPI]
 public abstract class Ability<TManager> : Ability where TManager : AbilityManager {
-  /// <inheritdoc cref="Ability.abilities"/>
-  public override TManager abilities => (TManager)base.abilities;
+  /// <inheritdoc cref="Ability.Abilities"/>
+  public override TManager Abilities => (TManager)base.Abilities;
 }
 
 /// <summary>
@@ -28,18 +28,18 @@ public abstract partial class Ability {
   /// </summary>
   // ReSharper disable once NotNullMemberIsNotInitialized
   [NotNull]
-  public Player player => Entity;
+  public Player Player => Entity;
 
   /// <summary>
   /// The <see cref="AbilityManager"/> that this ability belongs to.
   /// </summary>
   // ReSharper disable once NotNullMemberIsNotInitialized
-  [NotNull] public virtual AbilityManager abilities { get; internal set; }
+  [NotNull] public virtual AbilityManager Abilities { get; internal set; }
 
   /// <summary>
-  /// <see langword="true"/> if this ability belongs to the client <see cref="player"/> instance.
+  /// <see langword="true"/> if this ability belongs to the client <see cref="Player"/> instance.
   /// </summary>
-  public bool IsLocal => player.whoAmI == Main.myPlayer;
+  public bool IsLocal => Player.whoAmI == Main.myPlayer;
   #endregion
 
   #region Properties - Mod-defined
@@ -78,7 +78,7 @@ public abstract partial class Ability {
   /// The ability whose level is responsible for this abilities' level. By default, this ability.
   /// <para>Override this if this ability's <see cref="Level"/> is dependent on a different <see cref="Ability"/>'s <see cref="Level"/>.</para>
   /// </summary>
-  public virtual ILevelable levelableDependency => this as ILevelable;
+  public virtual ILevelable LevelableDependency => this as ILevelable;
   #endregion
 
   #region Properties - Runtime
@@ -91,12 +91,12 @@ public abstract partial class Ability {
   /// <summary>
   /// If true, the ability will be put into the next ability packet.
   /// </summary>
-  public bool netUpdate {
+  public bool NetUpdate {
     get => _netUpdate;
     protected internal set {
       _netUpdate = value;
       // Propagate true netUpdate upstream
-      if (value) abilities.netUpdate = true;
+      if (value) Abilities.NetUpdate = true;
     }
   }
 
@@ -113,7 +113,7 @@ public abstract partial class Ability {
   /// Current <see cref="AbilityState"/> of the ability.
   /// <para>Setting this value is done with <see cref="SetState(AbilityState, bool)"/>. This should only be done within <see cref="PreUpdate"/>.</para>
   /// </summary>
-  public AbilityState state { get; private set; }
+  public AbilityState State { get; private set; }
 
   /// <summary>
   /// Time the ability was in the current State.
@@ -123,43 +123,43 @@ public abstract partial class Ability {
   /// This value is incremented prior to calling <see cref="PreUpdate"/>, so if the state is changed in <see cref="PreUpdate"/>,
   /// this value will start at 0 for any UpdateX() calls.
   /// </remarks>
-  public int stateTime { get; internal set; }
+  public int StateTime { get; internal set; }
 
   /// <summary>
   /// Sets the <see cref="AbilityState"/> of the ability to <paramref name="abilityState"/>.
   /// <para>This should only be used within the <see cref="PreUpdate"/> method.</para>
   /// </summary>
-  /// <param name="abilityState">State to set <see cref="state"/> to.</param>
-  /// <param name="preserveCurrentTime">Whether to preserve or reset <see cref="stateTime"/>. Resets by default.</param>
+  /// <param name="abilityState">State to set <see cref="State"/> to.</param>
+  /// <param name="preserveCurrentTime">Whether to preserve or reset <see cref="StateTime"/>. Resets by default.</param>
   public void SetState(AbilityState abilityState, bool preserveCurrentTime = false) {
-    if (abilityState == state) return;
-    netUpdate = true;
-    state = abilityState;
-    if (!preserveCurrentTime) stateTime = 0;
+    if (abilityState == State) return;
+    NetUpdate = true;
+    State = abilityState;
+    if (!preserveCurrentTime) StateTime = 0;
   }
 
   /// <summary>
-  /// If <see cref="state"/> is <see cref="AbilityState.Inactive"/>.
+  /// If <see cref="State"/> is <see cref="AbilityState.Inactive"/>.
   /// </summary>
-  public bool Inactive => state == AbilityState.Inactive;
+  public bool Inactive => State == AbilityState.Inactive;
 
   /// <summary>
-  /// If <see cref="state"/> is <see cref="AbilityState.Starting"/>.
+  /// If <see cref="State"/> is <see cref="AbilityState.Starting"/>.
   /// </summary>
-  public bool Starting => state == AbilityState.Starting;
+  public bool Starting => State == AbilityState.Starting;
 
   /// <summary>
-  /// If <see cref="state"/> is <see cref="AbilityState.Active"/>.
+  /// If <see cref="State"/> is <see cref="AbilityState.Active"/>.
   /// </summary>
-  public bool Active => state == AbilityState.Active;
+  public bool Active => State == AbilityState.Active;
 
   /// <summary>
-  /// If <see cref="state"/> is <see cref="AbilityState.Ending"/>.
+  /// If <see cref="State"/> is <see cref="AbilityState.Ending"/>.
   /// </summary>
-  public bool Ending => state == AbilityState.Ending;
+  public bool Ending => State == AbilityState.Ending;
 
   /// <summary>
-  /// If <see cref="state"/> is either <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>.
+  /// If <see cref="State"/> is either <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>.
   /// </summary>
   /// <value> <see langword="true"/> if the state is either <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>, otherwise <see langword="false"/>. </value>
   public bool InUse => Starting || Active || Ending;
@@ -176,7 +176,7 @@ public abstract partial class Ability {
   /// <summary>
   /// Time left until the ability is no longer on cooldown.
   /// </summary>
-  public int cooldownLeft;
+  public int CooldownLeft;
 
   /// <summary>
   /// Whether the ability is currently on cooldown.
@@ -187,7 +187,7 @@ public abstract partial class Ability {
   /// Set this ability on cooldown.
   /// </summary>
   public virtual void StartCooldown() {
-    cooldownLeft = Cooldown;
+    CooldownLeft = Cooldown;
     IsOnCooldown = true;
   }
 
@@ -195,7 +195,7 @@ public abstract partial class Ability {
   /// End the cooldown for this ability, making it ready to use.
   /// </summary>
   public virtual void EndCooldown() {
-    cooldownLeft = 0;
+    CooldownLeft = 0;
     IsOnCooldown = false;
     OnRefreshed();
   }
@@ -205,8 +205,8 @@ public abstract partial class Ability {
   /// </summary>
   public virtual void UpdateCooldown() {
     if (!IsOnCooldown) return;
-    cooldownLeft--;
-    if (cooldownLeft <= 0 && RefreshCondition()) EndCooldown();
+    CooldownLeft--;
+    if (CooldownLeft <= 0 && RefreshCondition()) EndCooldown();
   }
 
   /// <summary>
@@ -230,7 +230,7 @@ public abstract partial class Ability {
   /// <para>Only called if <see cref="AbilityState"/> is <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>.</para>
   /// </summary>
   internal void Update() {
-    switch (state) {
+    switch (State) {
       case AbilityState.Active:
         UpdateActive();
         break;
@@ -302,10 +302,10 @@ public abstract partial class Ability {
   /// For <see cref="Networking.AbilityPacketHandler"/>.
   /// </summary>
   internal void PreReadPacket([NotNull] BinaryReader r) {
-    if (levelableDependency != null)
-      levelableDependency.Level = r.ReadInt32();
-    state = (AbilityState)r.ReadByte();
-    stateTime = r.ReadInt32();
+    if (LevelableDependency != null)
+      LevelableDependency.Level = r.ReadInt32();
+    State = (AbilityState)r.ReadByte();
+    StateTime = r.ReadInt32();
     ReadPacket(r);
   }
 
@@ -313,10 +313,10 @@ public abstract partial class Ability {
   /// For <see cref="Networking.AbilityPacketHandler"/>.
   /// </summary>
   internal void PreWritePacket([NotNull] ModPacket packet) {
-    if (levelableDependency != null)
-      packet.Write(levelableDependency.Level);
-    packet.Write((byte)state);
-    packet.Write(stateTime);
+    if (LevelableDependency != null)
+      packet.Write(LevelableDependency.Level);
+    packet.Write((byte)State);
+    packet.Write(StateTime);
     WritePacket(packet);
   }
 
@@ -363,7 +363,7 @@ public abstract partial class Ability {
   #region Misc
   /// <summary>
   /// Creates a new <see cref="AbilityProjectile"/> of type <typeparamref name="T"/>.
-  /// Assigns <see cref="AbilityProjectile.ability"/> to this ability, and <see cref="AbilityProjectile.level"/> if this ability is <see cref="ILevelable"/>.
+  /// Assigns <see cref="AbilityProjectile.Ability"/> to this ability, and <see cref="AbilityProjectile.Level"/> if this ability is <see cref="ILevelable"/>.
   /// </summary>
   /// <param name="offset">Positional offset from the player's center.</param>
   /// <param name="velocity">Starting speed of the projectile.</param>
@@ -374,12 +374,12 @@ public abstract partial class Ability {
   public T NewAbilityProjectile<T>(Vector2 offset = default, Vector2 velocity = default, int damage = 0, float knockBack = 0)
     where T : AbilityProjectile {
     int type = ModContent.ProjectileType<T>();
-    Projectile projectile = Projectile.NewProjectileDirect(player.GetSource_FromThis(), player.Center + offset, velocity, type, damage, knockBack, player.whoAmI);
+    Projectile projectile = Projectile.NewProjectileDirect(Player.GetSource_FromThis(), Player.Center + offset, velocity, type, damage, knockBack, Player.whoAmI);
 
     T modProjectile = (T)projectile.ModProjectile;
-    modProjectile.ability = this;
+    modProjectile.Ability = this;
     if (this is ILevelable levelable)
-      modProjectile.level = levelable.Level;
+      modProjectile.Level = levelable.Level;
     return modProjectile;
   }
 
@@ -390,9 +390,9 @@ public abstract partial class Ability {
   public override string ToString() =>
     $"Ability ID:{Id} Name:{GetType().Name} " +
     $"(Level {Level}{(this is ILevelable levelable ? $"/{levelable.MaxLevel}" : string.Empty)}) " +
-    $"Player:{player.whoAmI} State:{state} " +
-    $"Time:{stateTime} " +
-    (Cooldown != 0 ? $" Cooldown:{cooldownLeft}/{Cooldown}" : string.Empty);
+    $"Player:{Player.whoAmI} State:{State} " +
+    $"Time:{StateTime} " +
+    (Cooldown != 0 ? $" Cooldown:{CooldownLeft}/{Cooldown}" : string.Empty);
 
   /// <summary>
   /// Whether the <see cref="Ability"/> is in use.

@@ -25,7 +25,7 @@ public abstract partial class AnimationController {
   /// <summary>
   /// The <see cref="Animation"/> to retrieve track data from, such as frame duration.
   /// This <see cref="Animation"/>'s <see cref="AnimSpriteSheet"/> must contain all tracks that can be used.
-  /// <para>By default, this is the first <see cref="Animation"/> in <see cref="animations"/>.</para>
+  /// <para>By default, this is the first <see cref="Animation"/> in <see cref="Animations"/>.</para>
   /// </summary>
   public Animation MainAnimation { get; private set; }
 
@@ -70,7 +70,7 @@ public abstract partial class AnimationController {
   /// <summary>
   /// All <see cref="Animation"/>s that belong to this mod.
   /// </summary>
-  public List<Animation> animations { get; } = [];
+  public List<Animation> Animations { get; } = [];
 
   /// <summary>
   /// The <see cref="Terraria.Player"/> that is being animated.
@@ -128,12 +128,12 @@ public abstract partial class AnimationController {
     }
 
     Animation animation = new(this, spriteSheet);
-    if (animations.Count == 0) {
+    if (Animations.Count == 0) {
       MainAnimation = animation;
       SetTrack(spriteSheet.Tags[0].Name);
     }
 
-    animations.Add(animation);
+    Animations.Add(animation);
     return animation;
   }
 
@@ -147,7 +147,7 @@ public abstract partial class AnimationController {
   public void SetMainAnimation([NotNull] Animation animation, [CanBeNull] string track) {
     ArgumentNullException.ThrowIfNull(animation);
     if (track is not null) {
-      if (!animation.spriteSheet.TagDictionary.ContainsKey(track)) {
+      if (!animation.SpriteSheet.TagDictionary.ContainsKey(track)) {
         throw new ArgumentException("Track does not match an Animation Tag in the provided Animation");
       }
     }
@@ -159,7 +159,7 @@ public abstract partial class AnimationController {
     string tagName = options.TagName;
     ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
 
-    if (!MainAnimation.spriteSheet.TagDictionary.TryGetValue(tagName, out AnimTag tag)) {
+    if (!MainAnimation.SpriteSheet.TagDictionary.TryGetValue(tagName, out AnimTag tag)) {
       string message = $"\"{tagName}\" is not a valid key for the main Animation track.";
       throw new ArgumentException(message, nameof(options));
     }
@@ -258,7 +258,7 @@ public abstract partial class AnimationController {
 
   internal void SetTrack(string newTrack, bool? isReversed = null) {
     TagName = newTrack;
-    AnimTag track = MainAnimation.spriteSheet.TagDictionary[newTrack];
+    AnimTag track = MainAnimation.SpriteSheet.TagDictionary[newTrack];
     FrameTime = 0;
     Reversed = isReversed ?? track.IsReversed;
     FrameIndex = Reversed ? track.Frames.Length - 1 : 0;

@@ -9,25 +9,25 @@ public static class GlobalCompatConditions {
   /// should be disabled, contains conditions, if any return true,
   /// associated flag is turned to false, if none - to true
   /// </summary>
-  [NotNull] private static readonly List<Predicate<Player>> _disableGraphicsOrPredicates = [];
+  [NotNull] private static readonly List<Predicate<Player>> DisableGraphicsOrPredicates = [];
 
   /// <summary>
   /// The <see cref="Predicate{Player}"/> list to determine if
   /// animations updates should be disabled
   /// </summary>
-  [NotNull] private static readonly List<Predicate<Player>> _disableAnimationsUpdating = [];
+  [NotNull] private static readonly List<Predicate<Player>> DisableAnimationsUpdating = [];
 
   /// <summary>
-  /// Evaluates conditions of <see cref="_disableGraphicsOrPredicates"/>
+  /// Evaluates conditions of <see cref="DisableGraphicsOrPredicates"/>
   /// </summary>
   internal static bool EvaluateDisableGraphics(Player player) =>
-    _disableGraphicsOrPredicates.Any(p => p is not null && p(player));
+    DisableGraphicsOrPredicates.Any(p => p is not null && p(player));
 
   /// <summary>
-  /// Evaluates conditions of <see cref="_disableAnimationsUpdating"/>
+  /// Evaluates conditions of <see cref="DisableAnimationsUpdating"/>
   /// </summary>
   internal static bool EvaluateDisableAnimationUpdate(Player player) =>
-    _disableAnimationsUpdating.Any(p => p is not null && p(player));
+    DisableAnimationsUpdating.Any(p => p is not null && p(player));
 
   /// <summary>
   /// Adds <see cref="Predicate{Player}"/> to list
@@ -42,7 +42,7 @@ public static class GlobalCompatConditions {
   /// (as example, morph ball from NetroidMod should hide players' character)
   /// </summary>
   public static void AddGraphicsDisableCondition(Predicate<Player> p) =>
-    _disableGraphicsOrPredicates.Add(p);
+    DisableGraphicsOrPredicates.Add(p);
 
   /// <summary>
   /// Adds <see cref="Predicate{Player}"/> to list
@@ -55,11 +55,11 @@ public static class GlobalCompatConditions {
   /// disabling of animation (if using AnimationController) updating
   /// </summary>
   public static void AddAnimationUpdateDisableCondition(Predicate<Player> p) =>
-    _disableAnimationsUpdating.Add(p);
+    DisableAnimationsUpdating.Add(p);
 
   internal static void Unload()
   {
-    _disableGraphicsOrPredicates.Clear();
-    _disableAnimationsUpdating.Clear();
+    DisableGraphicsOrPredicates.Clear();
+    DisableAnimationsUpdating.Clear();
   }
 }

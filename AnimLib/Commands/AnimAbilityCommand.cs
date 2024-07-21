@@ -21,7 +21,7 @@ internal class AnimAbilityCommand : ModCommand {
     int idx = 0;
 
     AnimPlayer player = caller.Player.GetModPlayer<AnimPlayer>();
-    AnimCharacterCollection characters = player.characters;
+    AnimCharacterCollection characters = player.Characters;
 
     if (!player.DebugEnabled) {
       return Error("This command cannot be used outside of debug mode.");
@@ -55,7 +55,7 @@ internal class AnimAbilityCommand : ModCommand {
       return Error($"Mod {targetMod} does not use AnimLib.");
     }
 
-    AbilityManager manager = character.abilityManager;
+    AbilityManager manager = character.AbilityManager;
     if (manager is null) {
       return Error($"Mod {targetMod} does not have abilities.");
     }

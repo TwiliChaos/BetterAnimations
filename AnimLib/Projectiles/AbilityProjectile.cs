@@ -17,9 +17,9 @@ public abstract class AbilityProjectile : ModProjectile {
   public abstract int Id { get; }
 
   /// <summary>
-  /// The level of the <see cref="Ability"/> when this <see cref="AbilityProjectile"/> was created.
+  /// The level of the <see cref="Abilities.Ability"/> when this <see cref="AbilityProjectile"/> was created.
   /// </summary>
-  public int level {
+  public int Level {
     get => (int)Projectile.ai[0];
     set => Projectile.ai[0] = value;
   }
@@ -27,13 +27,13 @@ public abstract class AbilityProjectile : ModProjectile {
   /// <summary>
   /// THe <see cref="AnimPlayer"/> that this <see cref="AbilityProjectile"/> belongs to.
   /// </summary>
-  public AnimPlayer aPlayer => _aPlayer ??= Main.player[Projectile.owner].GetModPlayer<AnimPlayer>();
+  public AnimPlayer APlayer => _aPlayer ??= Main.player[Projectile.owner].GetModPlayer<AnimPlayer>();
 
   /// <summary>
-  /// The <see cref="Ability"/> that this <see cref="AbilityProjectile"/> belongs to.
+  /// The <see cref="Abilities.Ability"/> that this <see cref="AbilityProjectile"/> belongs to.
   /// </summary>
-  public Ability ability {
-    get => _ability ??= aPlayer.characters[Mod].abilityManager?[Id];
+  public Ability Ability {
+    get => _ability ??= APlayer.Characters[Mod].AbilityManager?[Id];
     internal set => _ability = value;
   }
 }

@@ -9,7 +9,7 @@ namespace AnimLib.Compat.Implementations;
 /// sprite is active
 /// </summary>
 public class PlayerHidingMount : AnimCompatSystem {
-  public readonly List<int> mount_ids = [MountID.Wolf];
+  public readonly List<int> MountIds = [MountID.Wolf];
 
   public override void PostSetupContent() {
     (string modName, string[] mounts)[] modMounts = [
@@ -24,7 +24,7 @@ public class PlayerHidingMount : AnimCompatSystem {
         continue;
       foreach (string mount in mounts) {
         if (ModContent.TryFind(modName, mount, out ModMount m)) {
-          mount_ids.Add(m.Type);
+          MountIds.Add(m.Type);
         }
         else {
           Log.Warn($"Desired Player Hiding Mount " +
@@ -38,12 +38,12 @@ public class PlayerHidingMount : AnimCompatSystem {
     GlobalCompatConditions.AddGraphicsDisableCondition(
       GetStandardPredicate(p => {
           if (p.mount is not null && p.mount.Active) {
-            return mount_ids.Contains(p.mount.Type);
+            return MountIds.Contains(p.mount.Type);
           }
 
           return false;
         }
       ));
-    _initialized = true;
+    Initialized = true;
   }
 }

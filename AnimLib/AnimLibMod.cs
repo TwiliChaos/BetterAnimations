@@ -52,7 +52,7 @@ public sealed partial class AnimLibMod : Mod {
   [NotNull]
   public static T GetAnimationController<T>([NotNull] ModPlayer modPlayer) where T : AnimationController {
     ArgumentNullException.ThrowIfNull(modPlayer);
-    AnimationController controller = modPlayer.GetAnimCharacter().animationController;
+    AnimationController controller = modPlayer.GetAnimCharacter().AnimationController;
     return controller as T ?? throw ThrowHelper.BadType<T>(controller, modPlayer.Mod, nameof(T));
   }
 
@@ -72,7 +72,7 @@ public sealed partial class AnimLibMod : Mod {
   [NotNull]
   public static T GetAbilityManager<T>([NotNull] ModPlayer modPlayer) where T : AbilityManager {
     ArgumentNullException.ThrowIfNull(modPlayer);
-    AbilityManager manager = modPlayer.GetAnimCharacter().abilityManager;
+    AbilityManager manager = modPlayer.GetAnimCharacter().AbilityManager;
     return manager as T ?? throw ThrowHelper.BadType<T>(manager, modPlayer.Mod, nameof(T));
   }
 

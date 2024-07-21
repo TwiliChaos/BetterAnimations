@@ -5,14 +5,14 @@ public abstract class AnimCompatSystem : ModSystem {
   /// Set this flag to true, if system activation
   /// succeed and predicates were registered
   /// </summary>
-  protected bool _initialized;
+  protected bool Initialized;
 
 
   /// <summary>
   /// Set this flag to true, if system activation
   /// succeed and predicates were registered
   /// </summary>
-  protected bool _fault;
+  protected bool Fault;
 
   /// <summary>
   /// Used for determining, if this compat system
@@ -20,7 +20,7 @@ public abstract class AnimCompatSystem : ModSystem {
   /// situation
   /// </summary>
   public virtual bool IsAllowed(Player player) =>
-    _initialized && !_fault && !IsBlockListed(player);
+    Initialized && !Fault && !IsBlockListed(player);
 
   /// <summary>
   /// Checks that this compat system is not
@@ -34,12 +34,12 @@ public abstract class AnimCompatSystem : ModSystem {
   /// blacklisted in AnimPlayer's character controllers
   /// </summary>
   public bool IsBlockListed(AnimPlayer player) {
-    AnimCharacter character = player.characters.ActiveCharacter;
+    AnimCharacter character = player.Characters.ActiveCharacter;
     return character != null && (
-      character.abilityManager != null &&
-      character.abilityManager.AnimCompatSystemBlocklist.Contains(Name) ||
-      character.animationController != null &&
-      character.animationController.AnimCompatSystemBlocklist.Contains(Name)
+      character.AbilityManager != null &&
+      character.AbilityManager.AnimCompatSystemBlocklist.Contains(Name) ||
+      character.AnimationController != null &&
+      character.AnimationController.AnimCompatSystemBlocklist.Contains(Name)
     );
   }
 
@@ -54,14 +54,14 @@ public abstract class AnimCompatSystem : ModSystem {
       return predicate(player);
     }
     catch (Exception ex) {
-      _fault = true;
+      Fault = true;
       Log.Error($"Something went wrong in {Name} compat module, it was disabled...", ex);
       return false;
     }
   };
 
   public override void Unload() {
-    _initialized = false;
-    _fault = false;
+    Initialized = false;
+    Fault = false;
   }
 }

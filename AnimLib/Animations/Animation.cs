@@ -18,12 +18,12 @@ public sealed class Animation {
   /// <see cref="AnimationController"/> this <see cref="Animation"/> belongs to. This is used to get the current <see cref="AnimTag"/>s and
   /// <see cref="AnimFrame"/>s.
   /// </summary>
-  [NotNull] public readonly AnimationController controller;
+  [NotNull] public readonly AnimationController Controller;
 
   /// <summary>
   /// <see cref="AnimSpriteSheet"/> info used for this <see cref="Animation"/>.
   /// </summary>
-  [NotNull] public readonly AnimSpriteSheet spriteSheet;
+  [NotNull] public readonly AnimSpriteSheet SpriteSheet;
 
   /// <summary>
   /// Creates a new instance of <see cref="Animation"/> for the given <see cref="AnimPlayer"/>, using the given <see cref="AnimSpriteSheet"/> and
@@ -37,8 +37,8 @@ public sealed class Animation {
       throw new InvalidOperationException("Animation classes are not allowed to be constructed on servers.");
     }
 
-    this.controller = controller;
-    this.spriteSheet = spriteSheet;
+    Controller = controller;
+    SpriteSheet = spriteSheet;
   }
 
 
@@ -49,12 +49,12 @@ public sealed class Animation {
   /// <see cref="AnimSpriteSheet"/>.
   /// </para>
   /// </summary>
-  public AnimTag CurrentTag => spriteSheet.TagDictionary[controller.TagName];
+  public AnimTag CurrentTag => SpriteSheet.TagDictionary[Controller.TagName];
 
   /// <summary>
   /// Current <see cref="AnimFrame"/> that is being played.
   /// </summary>
-  public AnimFrame CurrentFrame => CurrentTag.Frames[controller.FrameIndex];
+  public AnimFrame CurrentFrame => CurrentTag.Frames[Controller.FrameIndex];
 
   /// <summary>
   /// Gets the <see cref="Rectangle"/> that represents the current sprite position and size based on the current
@@ -63,7 +63,7 @@ public sealed class Animation {
   /// <param name="layer">
   /// The name of the <see cref="AnimTextureAtlas"/> to get the <see cref="Rectangle"/> from.
   /// </param>
-  public Rectangle GetRect(string layer) => spriteSheet.GetAtlasRect(layer, CurrentFrame.AtlasFrameIndex);
+  public Rectangle GetRect(string layer) => SpriteSheet.GetAtlasRect(layer, CurrentFrame.AtlasFrameIndex);
 
   /// <summary>
   /// Texture of the <see cref="AnimTextureAtlas"/> whose name matches <param name="layer"/>
@@ -74,7 +74,7 @@ public sealed class Animation {
   public Texture2D GetTexture([NotNull] string layer) {
     ArgumentNullException.ThrowIfNull(layer);
 
-    var textureAtlasMap = spriteSheet.Atlases;
+    var textureAtlasMap = SpriteSheet.Atlases;
     if (!textureAtlasMap.TryGetValue(layer, out AnimTextureAtlas atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
@@ -107,9 +107,9 @@ public sealed class Animation {
     Texture2D texture = GetTexture(layer);
     Vector2 position = drawInfo.Position - Main.screenPosition + player.Size / 2;
     Rectangle rect = GetRect(layer);
-    SpriteEffects effect = controller.Effects;
+    SpriteEffects effect = Controller.Effects;
     Vector2 origin = new(rect.Width / 2f, rect.Height / 2f);
 
-    return new DrawData(texture, position, rect, Color.White, controller.SpriteRotation, origin, 1, effect);
+    return new DrawData(texture, position, rect, Color.White, Controller.SpriteRotation, origin, 1, effect);
   }
 }

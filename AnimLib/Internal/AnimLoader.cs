@@ -59,11 +59,11 @@ internal static class AnimLoader {
 
     foreach (AnimSet pair in NewInstances(animPlayer.Player)) {
       AnimCharacter character = new(pair.Mod, characterCollection) {
-        animationController = pair.Controller,
-        abilityManager = pair.Manager
+        AnimationController = pair.Controller,
+        AbilityManager = pair.Manager
         // TODO: Abilities
       };
-      characterCollection.dict[pair.Mod] = character;
+      characterCollection.Dict[pair.Mod] = character;
     }
 
     return characterCollection;
@@ -96,16 +96,16 @@ internal static class AnimLoader {
         var list = new List<Ability>(pair.Abilities.Count);
         foreach (Ability a in pair.Abilities) {
           Ability newAbility = a.NewInstance(player);
-          newAbility.abilities = newManager;
+          newAbility.Abilities = newManager;
           list.Add(newAbility);
         }
 
         list.Sort((a1, a2) => a1.Id.CompareTo(a2.Id));
-        newManager.abilityArray = list.ToArray();
+        newManager.AbilityArray = list.ToArray();
       }
 
       newManager.Initialize();
-      foreach (Ability ability in newManager.abilityArray) {
+      foreach (Ability ability in newManager.AbilityArray) {
         ability.Initialize();
       }
 
