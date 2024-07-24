@@ -20,7 +20,7 @@ public partial class AnimationController : ModType<Player, AnimationController>,
     ModTypeLookup<AnimationController>.Register(this);
   }
 
-  protected override Player CreateTemplateEntity() => null;
+  protected override Player CreateTemplateEntity() => null!;
 
   public ushort Index { get; internal set; }
 }

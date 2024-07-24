@@ -1,16 +1,17 @@
 using AnimLib.Abilities;
 using AnimLib.Animations;
+using Terraria.ID;
 
 namespace AnimLib.Internal;
 
 internal static class AnimLoader {
-  internal static readonly Dictionary<Mod, AnimSet> AnimationClasses = [];
+  private static readonly Dictionary<Mod, AnimSet> TemplateAnimSets = [];
 
   /// <summary>
   /// Called from <see cref="ModType{T,T}"/> <see cref="AnimationController.Register"/>
   /// </summary>
   internal static void Add(AnimationController controller) {
-    AnimSet set = GetAnimSetForModType(controller);
+    AnimSet set = GetTemplateForModType(controller);
     if (set.Controller is not null) {
       throw new InvalidOperationException(
         $"Cannot have more than one {nameof(AnimationController)} on mod {controller.Mod}");
@@ -24,7 +25,7 @@ internal static class AnimLoader {
   /// Called from <see cref="ModType{T,T}"/> <see cref="AbilityManager.Register"/>
   /// </summary>
   internal static void Add(AbilityManager manager) {
-    AnimSet set = GetAnimSetForModType(manager);
+    AnimSet set = GetTemplateForModType(manager);
     if (set.Manager is not null) {
       throw new InvalidOperationException(
         $"Cannot have more than one {nameof(AnimationController)} on mod {manager.Mod}");
@@ -35,66 +36,72 @@ internal static class AnimLoader {
   }
 
   public static void Add(Ability ability) {
-    AnimSet set = GetAnimSetForModType(ability);
-    ability.Index = (ushort)set.Abilities.Count;
+    AnimSet set = GetTemplateForModType(ability);
     set.Abilities.Add(ability);
   }
 
-  private static AnimSet GetAnimSetForModType<T>(T item) where T : ModType {
-    if (AnimationClasses.TryGetValue(item.Mod, out AnimSet set)) {
-      return set;
+  private static AnimSet GetTemplateForModType<T>(T item) where T : ModType {
+    if (TemplateAnimSets.TryGetValue(item.Mod, out AnimSet? template)) {
+      return template;
     }
 
-    set = new AnimSet((ushort)AnimationClasses.Count, item.Mod);
-    AnimationClasses.Add(item.Mod, set);
-    return set;
+    template = new AnimSet((ushort)TemplateAnimSets.Count, item.Mod);
+    TemplateAnimSets.Add(item.Mod, template);
+    return template;
   }
 
   internal static void Unload() {
-    AnimationClasses.Clear();
+    TemplateAnimSets.Clear();
   }
 
+  // Called from AnimPlayer.Initialize()
   internal static AnimCharacterCollection SetupCharacterCollection(AnimPlayer animPlayer) {
     AnimCharacterCollection characterCollection = new();
 
-    foreach (AnimSet pair in NewInstances(animPlayer.Player)) {
-      AnimCharacter character = new(pair.Mod, characterCollection) {
-        AnimationController = pair.Controller,
-        AbilityManager = pair.Manager
-        // TODO: Abilities
-      };
-      characterCollection.Dict[pair.Mod] = character;
+    foreach (AnimSet set in NewInstances(animPlayer.Player)) {
+      AnimCharacter character = new(set.Mod, characterCollection, set.Manager, set.Controller);
+      characterCollection.Dict[set.Mod] = character;
     }
 
     return characterCollection;
   }
 
   private static IEnumerable<AnimSet> NewInstances(Player player) {
-    foreach (AnimSet pair in AnimationClasses.Values) {
-      AnimSet set = new(pair.Index, pair.Mod) {
-        Controller = InstantiateAnimationController(player, pair),
-        Manager = InstantiateAbilityManager(player, pair)
+    foreach (AnimSet template in TemplateAnimSets.Values) {
+      AnimSet set = new(template.Index, template.Mod) {
+        Controller = NewAnimationController(player, template.Controller),
+        Manager = NewAbilityManager(player, template.Manager, template.Abilities)
       };
       yield return set;
     }
   }
 
-  private static AnimationController InstantiateAnimationController(Player player, AnimSet pair) {
+  private static AnimationController? NewAnimationController(Player player, AnimationController? controller) {
+    if (controller is null) {
+      return null;
+    }
     try {
-      return pair.Controller.NewInstance(player);
+      return controller.NewInstance(player);
     }
     catch (Exception ex) {
-      Log.Error($"Exception thrown when constructing [{pair.Controller.FullName}]", ex);
+      Log.Error($"Exception thrown when constructing [{controller.FullName}]", ex);
       throw;
     }
   }
 
-  private static AbilityManager InstantiateAbilityManager(Player player, AnimSet pair) {
+  private static AbilityManager? NewAbilityManager(Player player, AbilityManager? manager, List<Ability> abilities) {
+    if (manager is null) {
+      if (abilities.Count > 0) {
+        string message = $"[{abilities[0].Mod}]: Missing AbilityManager but has at least one Ability loaded.";
+        throw new InvalidOperationException(message);
+      }
+      return null;
+    }
     try {
-      AbilityManager newManager = pair.Manager.NewInstance(player);
-      if (pair.Abilities.Count > 0) {
-        var list = new List<Ability>(pair.Abilities.Count);
-        foreach (Ability a in pair.Abilities) {
+      AbilityManager newManager = manager.NewInstance(player);
+      if (abilities.Count > 0) {
+        var list = new List<Ability>(abilities.Count);
+        foreach (Ability a in abilities) {
           Ability newAbility = a.NewInstance(player);
           newAbility.Abilities = newManager;
           list.Add(newAbility);
@@ -112,7 +119,7 @@ internal static class AnimLoader {
       return newManager;
     }
     catch (Exception ex) {
-      Log.Error($"Exception thrown when constructing [{pair.Manager.FullName}]", ex);
+      Log.Error($"Exception thrown when constructing [{manager.FullName}]", ex);
       throw;
     }
   }
@@ -124,9 +131,9 @@ internal static class AnimLoader {
 /// <param name="index"></param>
 /// <param name="mod"></param>
 internal class AnimSet(ushort index, Mod mod) {
-  internal AnimationController Controller;
-  internal AbilityManager Manager;
-  internal List<Ability> Abilities = [];
+  internal AnimationController? Controller;
+  internal AbilityManager? Manager;
+  internal readonly List<Ability> Abilities = [];
   internal readonly ushort Index = index;
   internal readonly Mod Mod = mod;
 }

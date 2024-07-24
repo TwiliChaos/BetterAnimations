@@ -1,6 +1,7 @@
 using AnimLib.Abilities;
 using AnimLib.Animations;
 using AnimLib.Extensions;
+using JetBrains.Annotations;
 
 namespace AnimLib;
 
@@ -18,15 +19,17 @@ public class AnimCharacterWrapper<TAnimation, TAbility>
 
   public readonly AnimCharacter Character;
 
-  public TAnimation AnimationController => Character.AnimationController as TAnimation;
-  public TAbility AbilityManager => Character.AbilityManager as TAbility;
+  public TAnimation? AnimationController => Character.AnimationController as TAnimation;
+  public TAbility? AbilityManager => Character.AbilityManager as TAbility;
 }
 
+[PublicAPI]
 public class AnimCharacter {
   /// <summary>
   /// Enum representing the priority of the active character, for determining replacing the active state of a character..
   /// Used to determine if <see cref="AnimCharacter"/> can disable by other <see cref="AnimCharacter">AnimCharacters</see>.
   /// </summary>
+  [PublicAPI]
   public enum Priority {
     /// <summary>
     /// Low priority. This character can only be enabled if no other characters are in use,
@@ -55,15 +58,16 @@ public class AnimCharacter {
     Highest = 4
   }
 
-  internal AnimCharacter(Mod mod, AnimCharacterCollection characters) {
+  internal AnimCharacter(Mod mod, AnimCharacterCollection characters, AbilityManager? abilityManager, AnimationController? animationController) {
     Mod = mod;
     Characters = characters;
+    AbilityManager = abilityManager;
+    AnimationController = animationController;
   }
 
   /// <summary>
   /// The <see cref="Terraria.ModLoader.Mod"/> that this <see cref="AnimCharacter"/> instance belongs to.
   /// </summary>
-  [NotNull]
   public Mod Mod { get; }
 
   /// <summary>
@@ -72,19 +76,15 @@ public class AnimCharacter {
   /// This value is your type of <see cref="Animations.AnimationController"/> if your mod has a type inheriting <see cref="Animations.AnimationController"/>;
   /// otherwise, it is <see langword="null"/>.
   /// </summary>
-  [CanBeNull]
-  public AnimationController AnimationController { get; internal init; }
+  public AnimationController? AnimationController { get; }
 
   /// <summary>
   /// The <see cref="Abilities.AbilityManager"/> of this character.
-  /// This value is <see langword="null"/> if your mod does not have any types inheriting types in the <see cref="AnimLib.Abilities"/> namespace.
   /// This value is your type of <see cref="Abilities.AbilityManager"/> if your mod has a type inheriting <see cref="Abilities.AbilityManager"/>;
-  /// otherwise, it is <see cref="AnimLib"/>'s type <see cref="Abilities.AbilityManager"/>.
+  /// otherwise, it is <see langword="null"/>.
   /// </summary>
-  [CanBeNull]
-  public AbilityManager AbilityManager { get; internal init; }
+  public AbilityManager? AbilityManager { get; }
 
-  [NotNull]
   internal AnimCharacterCollection Characters { get; }
 
 
@@ -125,7 +125,10 @@ public class AnimCharacter {
   /// if another character of a similar or higher <see cref="Priority"/> is already active.
   /// </summary>
   /// <param name="priority">The way that the player enabled the character.</param>
-  /// <returns></returns>
+  /// <returns>
+  /// <see langword="false"/> if <see cref="CanEnable"/> would return <see langword="false"/>;
+  /// otherwise, enables your character and returns <see langword="true"/>
+  /// </returns>
   public bool TryEnable(Priority priority = Priority.Default) {
     if (!CanEnable(priority)) return false;
     Characters.Enable(this, priority);
@@ -141,6 +144,10 @@ public class AnimCharacter {
   /// <summary>
   /// Disable your character.
   /// </summary>
+  /// <returns>
+  /// <see langword="false"/> if <see cref="IsEnabled"/> is already false;
+  /// otherwise, disables your character and returns <see langword="true"/>
+  /// </returns>
   public bool TryDisable() {
     if (!IsEnabled) return false;
     Characters.Disable(this);
@@ -155,12 +162,12 @@ public class AnimCharacter {
   /// <summary>
   /// Event called when the <see cref="AnimCharacter"/> is enabled.
   /// </summary>
-  public event Action OnEnable;
+  public event Action? OnEnable;
 
   /// <summary>
   /// Event called when the <see cref="AnimCharacter"/> is disabled.
   /// </summary>
-  public event Action OnDisable;
+  public event Action? OnDisable;
 
   internal void Update() {
     AnimationController?.UpdateConditions();
@@ -181,7 +188,7 @@ public class AnimCharacter {
     if (AnimationController is not null) {
       try {
         if (AnimationController.PreUpdate()) {
-          var options = AnimationController.Update();
+          AnimationOptions options = AnimationController.Update();
           if (options.TagName is not null) {
             AnimationController.UpdateAnimation(options);
           }

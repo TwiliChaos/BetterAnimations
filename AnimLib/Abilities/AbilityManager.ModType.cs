@@ -14,7 +14,7 @@ public partial class AbilityManager : ModType<Player, AbilityManager>, IIndexed 
     ModTypeLookup<AbilityManager>.Register(this);
   }
 
-  protected override Player CreateTemplateEntity() => null;
+  protected override Player CreateTemplateEntity() => null!;
 
   public ushort Index { get; internal set; }
 }

@@ -26,8 +26,11 @@ internal class AbilityPacketHandler : PacketHandler {
     int modCount = reader.ReadLowestCast(ModNet.NetModCount);
     for (int i = 0; i < modCount; i++) {
       Mod mod = ModLoader.GetMod(reader.ReadString());
-      AbilityManager manager = fromPlayer.Characters[mod].AbilityManager;
-      if (manager is null) continue;
+      AbilityManager? manager = fromPlayer.Characters[mod].AbilityManager;
+      if (manager is null) {
+        continue;
+      }
+
       int abilityCount = reader.ReadLowestCast(manager.AbilityArray.Length);
       for (int j = 0; j < abilityCount; j++) {
         int abilityId = reader.ReadLowestCast(manager.AbilityArray.Length);

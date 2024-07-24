@@ -8,8 +8,7 @@ public partial class AnimationController {
   /// in order to block their work, when <see cref="AnimCharacter"/>
   /// with this <see cref="AnimationController"/> is active.
   /// </summary>
-  [Obsolete("Will be reworked")] [NotNull]
-  public readonly HashSet<string> AnimCompatSystemBlocklist = [];
+  [Obsolete("Will be reworked")] public readonly HashSet<string> AnimCompatSystemBlocklist = [];
 
   private bool _graphicsDisabledDirectly;
   private bool _animationUpdateDisabledDirectly;
@@ -65,7 +64,7 @@ public partial class AnimationController {
   /// Use this for compatibility, if you want to trigger directly
   /// disabling of PlayerDrawLayers' changes
   /// (hiding vanilla layers and displaying game character)
-  /// (as example, morph ball from NetroidMod should hide players' character)
+  /// (as example, morph ball from MetroidMod should hide players' character)
   /// </summary>
   public void DisableGraphicsDirectly() {
     GraphicsEnabledCompat = false;

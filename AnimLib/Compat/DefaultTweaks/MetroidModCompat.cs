@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Terraria.DataStructures;
+﻿using Terraria.DataStructures;
 
 namespace AnimLib.Compat.Implementations;
 
@@ -9,8 +8,12 @@ namespace AnimLib.Compat.Implementations;
 /// </summary>
 internal class MetroidModMorphBallCompat : AnimCompatSystem {
   public const string ModName = "MetroidMod";
+
   public override void PostSetupContent() {
-    if (ModLoader.Mods.All(m => m.Name != ModName)) return;
+    if (!ModLoader.HasMod(ModName)) {
+      return;
+    }
+
     if (ModContent.TryFind(ModName, "BallLayer", out PlayerDrawLayer ballLayer)) {
       GlobalCompatConditions.AddGraphicsDisableCondition(
         GetStandardPredicate(

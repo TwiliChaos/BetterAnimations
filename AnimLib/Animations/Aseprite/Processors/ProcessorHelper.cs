@@ -7,13 +7,15 @@ using Rectangle = AsepriteDotNet.Common.Rectangle;
 namespace AnimLib.Animations.Aseprite.Processors;
 
 public static class ProcessorHelper {
-  public static Rgba32[][] FlattenFrameToTopLayers(AsepriteFile file, int frameIndex,
+  // This is an non-nullable array where each element represents a root layer at the specified frame.
+  // Some layers may not have pixel data at the specified frame, and would thus be null.
+  public static Rgba32[]?[] FlattenFrameToTopLayers(AsepriteFile file, int frameIndex,
     ProcessorOptions options, AsepriteLayer[] rootLayers) {
     ArgumentNullException.ThrowIfNull(file);
 
     AsepriteFrame frame = file.Frames[frameIndex];
 
-    var result = new Rgba32[rootLayers.Length][];
+    Rgba32[]?[] result = new Rgba32[rootLayers.Length][];
 
     for (int i = 0; i < rootLayers.Length; i++) {
       AsepriteLayer rootLayer = rootLayers[i];
@@ -30,7 +32,7 @@ public static class ProcessorHelper {
           continue;
         }
 
-        Rgba32[] flattenedLayerPixels = null;
+        Rgba32[]? flattenedLayerPixels = null;
         if (MergeCel(options, frame, cel, ref flattenedLayerPixels)) {
           result[i] = flattenedLayerPixels;
         }
@@ -42,11 +44,10 @@ public static class ProcessorHelper {
     return result;
   }
 
-  [CanBeNull]
-  private static Rgba32[] MergeGroupCels(ProcessorOptions options, AsepriteFrame frame, AsepriteGroupLayer groupLayer) {
-    Rgba32[] flattenedLayerPixels = null;
+  private static Rgba32[]? MergeGroupCels(ProcessorOptions options, AsepriteFrame frame, AsepriteGroupLayer groupLayer) {
+    Rgba32[]? flattenedLayerPixels = null;
 
-    var cels = GetCels(groupLayer, frame);
+    var cels = GetGroupCels(groupLayer, frame);
     foreach (AsepriteCel cel in cels) {
       MergeCel(options, frame, cel, ref flattenedLayerPixels);
     }
@@ -55,7 +56,7 @@ public static class ProcessorHelper {
   }
 
 
-  private static List<AsepriteCel> GetCels(AsepriteGroupLayer groupLayer, AsepriteFrame frame) {
+  private static List<AsepriteCel> GetGroupCels(AsepriteGroupLayer groupLayer, AsepriteFrame frame) {
     List<AsepriteCel> result = [];
 
     int childrenLength = groupLayer.Children.Length;
@@ -79,7 +80,7 @@ public static class ProcessorHelper {
   }
 
   private static bool MergeCel(ProcessorOptions options, AsepriteFrame frame, AsepriteCel cel,
-    [CanBeNull] ref Rgba32[] flattenedLayerPixels) {
+    ref Rgba32[]? flattenedLayerPixels) {
     cel = cel is AsepriteLinkedCel linkedCel ? linkedCel.Cel : cel;
 
     if (options.OnlyVisibleLayers && !cel.Layer.IsVisible) {

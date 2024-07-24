@@ -1,5 +1,7 @@
 using System.Linq;
+using System.Text;
 using AnimLib.Abilities;
+using JetBrains.Annotations;
 
 namespace AnimLib.Commands;
 
@@ -7,7 +9,7 @@ namespace AnimLib.Commands;
 internal class AnimAbilityCommand : ModCommand {
   public override string Command => "animability";
 
-  public override string Usage => "/animability <mod> <ability> [level]";
+  public override string Usage => "/animability <mod> [ability] [level]";
   public override string Description => "Get or set the ability level.";
 
   public override CommandType Type => CommandType.Chat;
@@ -17,88 +19,92 @@ internal class AnimAbilityCommand : ModCommand {
     caller.Reply(message.Text, message.Color);
   }
 
-  private Message Action(CommandCaller caller, IReadOnlyList<string> args) {
+  private static Message Action(CommandCaller caller, IReadOnlyList<string> args) {
     int idx = 0;
 
     AnimPlayer player = caller.Player.GetModPlayer<AnimPlayer>();
     AnimCharacterCollection characters = player.Characters;
 
+#if !DEBUG
     if (!player.DebugEnabled) {
       return Error("This command cannot be used outside of debug mode.");
     }
+#endif
 
     if (characters.Count == 0) {
       return Error($"This command cannot be used when no mods are using {nameof(AnimLib)}.");
     }
 
-    if (!HasNextArg(out string arg)) {
-      return Error($"This command requires arguments. Usage: {Usage}");
+    if (!HasNextArg(out string arg) && characters.Count > 1) {
+      // Attempt to view abilities but more than one mod loaded
+      return Error($"Must specify mod when more than one mod is using {nameof(AnimLib)}.");
     }
 
     if (!ModLoader.TryGetMod(arg, out Mod targetMod)) {
       // We'll allow not specifying mod only if exactly one mod is using AnimLib
-      var charactersKeys = characters.Keys.ToArray();
-      if (charactersKeys.Length > 1) {
+      if (characters.Count > 1) {
+        // Attempt to write value to an ability but more than one loaded
         return Error($"Must specify mod when more than one mod is using {nameof(AnimLib)}.");
       }
 
       // Only one mod is loaded, command implicitly refers to that mod
-      targetMod = charactersKeys.First();
+      targetMod = characters.Keys.First();
       idx--;
     }
 
-    if (!HasNextArg(out arg)) {
-      return Error("This command requires at least 2 arguments.");
-    }
-
-    if (!characters.TryGetValue(targetMod, out AnimCharacter character)) {
+    if (!characters.TryGetValue(targetMod, out AnimCharacter? character)) {
       return Error($"Mod {targetMod} does not use AnimLib.");
     }
 
-    AbilityManager manager = character.AbilityManager;
+    AbilityManager? manager = character.AbilityManager;
     if (manager is null) {
       return Error($"Mod {targetMod} does not have abilities.");
     }
 
-    Ability ability = null;
+    if (!HasNextArg(out arg)) {
+      // Command reading list of abilities and their stats
+      StringBuilder sb = new();
+      foreach (Ability a in manager) {
+        sb.AppendLine(a.ToString());
+      }
+
+      return Success(sb.ToString());
+    }
+
+    Ability? ability;
     if (int.TryParse(arg, out int id)) {
       if (!manager.TryGet(id, out ability)) {
         return Error("Specified ability ID is out of range.");
       }
-
-      ability = manager[id];
     }
     else {
-      foreach (Ability a in manager) {
-        if (string.Equals(a.GetType().Name, arg, StringComparison.OrdinalIgnoreCase)) {
-          ability = a;
-          break;
-        }
-      }
-
+      ability = manager.FirstOrDefault(a => string.Equals(a.Name, arg, StringComparison.OrdinalIgnoreCase));
       if (ability is null) {
         return Error($"\"{arg}\" is not a valid ability name.");
       }
     }
 
-    ILevelable levelable = ability as ILevelable;
+    ILevelable? levelable = ability as ILevelable;
     if (!HasNextArg(out arg)) {
-      // Command is only Reading
-      return Success(levelable is null
-        ? $"{ability.GetType().Name} is currently {(ability.Unlocked ? "Unlocked" : "Locked")} "
-        : $"{ability.GetType().Name} is currently {(ability.Unlocked ? "Unlocked" : "Locked")} at level {levelable.Level}/{levelable.MaxLevel}");
+      // Command is reading specific ability
+      string msg = $"{ability.GetType().Name} is currently {(ability.Unlocked ? "Unlocked" : "Locked")} ";
+      if (levelable is not null) {
+        msg += $" at level {levelable.Level}/{levelable.MaxLevel}";
+      }
+
+      return Success(msg);
     }
 
     if (!int.TryParse(arg, out int level)) {
-      return Error("Argument must be a number.");
+      return Error($"Argument {arg} must be a number.");
     }
 
     if (level < 0) {
-      return Error("Argument must be a positive number.");
+      return Error($"Argument {arg} must be a positive number.");
     }
 
     if (levelable is null) {
-      return Error($"{ability} cannot be leveled.");
+      return Error($"{ability.Name} cannot be leveled.");
     }
 
     levelable.Level = level;

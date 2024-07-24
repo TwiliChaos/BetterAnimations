@@ -2,7 +2,7 @@ using AnimLib.Abilities;
 using AnimLib.Animations;
 using AnimLib.Internal;
 using AnimLib.Networking;
-using Terraria.ModLoader.IO;
+using JetBrains.Annotations;
 
 namespace AnimLib;
 
@@ -11,22 +11,15 @@ namespace AnimLib;
 /// </summary>
 [UsedImplicitly]
 public sealed class AnimPlayer : ModPlayer {
-  /// <summary>
-  /// Old ability save data from AnimLib goes here
-  /// </summary>
-  public TagCompound OldAbilities { get; internal set; }
-
-  [Obsolete] private const string AllAbilityTagKey = "abilities";
-
-  private static AnimPlayer _local;
+  private static AnimPlayer? _local;
 
   private bool _abilityNetUpdate;
 
   internal AnimCharacterCollection Characters =>
     _characters ??= AnimLoader.SetupCharacterCollection(this);
-  private AnimCharacterCollection _characters;
+  private AnimCharacterCollection? _characters;
 
-  internal static AnimPlayer Local {
+  internal static AnimPlayer? Local {
     get {
       if (_local is null) {
         if (Main.gameMenu) return null;
@@ -41,8 +34,7 @@ public sealed class AnimPlayer : ModPlayer {
   /// <summary>
   /// The current active <see cref="AnimCharacter"/>.
   /// </summary>
-  [CanBeNull]
-  private AnimCharacter ActiveCharacter => Characters.ActiveCharacter;
+  private AnimCharacter? ActiveCharacter => Characters.ActiveCharacter;
 
   /// <summary>
   /// Whether any <see cref="AnimCharacter"/>s need to be net-synced.<br />
@@ -75,6 +67,7 @@ public sealed class AnimPlayer : ModPlayer {
     }
   }
 
+  // ReSharper disable once RedundantOverriddenMember
   public override void CopyClientState(ModPlayer targetCopy) => base.CopyClientState(targetCopy);
 
   private void SendAbilityChanges() => ModNetHandler.Instance.AbilityPacketHandler.SendPacket(255, Player.whoAmI);
@@ -88,35 +81,4 @@ public sealed class AnimPlayer : ModPlayer {
   /// Updates all <see cref="AnimationController"/>s on this <see cref="Player"/>.
   /// </summary>
   public override void PostUpdate() => ActiveCharacter?.PostUpdate();
-
-  /// <summary>
-  /// Saves all <see cref="Ability"/> data across all mods.
-  /// </summary>
-  /// <remarks>
-  /// This will save all ability data to this mod regardless of <see cref="AbilityManager.AutoSave"/> condition.
-  /// <see cref="AbilityManager.AutoSave"/> will only prevent automatic loading of ability data.
-  /// This is set up so that player ability data is not lost if the mod author changes AutoSave from false to true.
-  /// </remarks>
-  /// <seealso cref="AbilityManager.AutoSave">AbilityManager.AutoSave</seealso>
-  [Obsolete]
-  public override void SaveData(TagCompound tag) {
-    /* tModPorter Suggestion: Edit tag parameter instead of returning new TagCompound */
-    if ((OldAbilities?.Count ?? 0) > 0) {
-      tag[AllAbilityTagKey] = OldAbilities;
-    }
-  }
-
-  /// <summary>
-  /// Loads all <see cref="Ability"/> data across all mods where <see cref="AbilityManager.AutoSave"/> is <see langword="true"/>.
-  /// </summary>
-  /// <remarks>
-  /// This mod will save all ability data to this mod regardless of <see cref="AbilityManager.AutoSave"/> condition.
-  /// <see cref="AbilityManager.AutoSave"/> will only prevent automatic loading of ability data.
-  /// This is set up so that player ability data is not lost if the mod author changes AutoSave from false to true.
-  /// </remarks>
-  [Obsolete]
-  public override void LoadData(TagCompound tag) {
-    if (tag.ContainsKey(AllAbilityTagKey))
-      OldAbilities = tag.GetCompound(AllAbilityTagKey);
-  }
 }

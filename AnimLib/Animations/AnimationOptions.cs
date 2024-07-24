@@ -1,4 +1,6 @@
-﻿namespace AnimLib.Animations;
+using JetBrains.Annotations;
+
+namespace AnimLib.Animations;
 
 /// <param name="tagName">
 /// The Animation Tag to play, as defined in the Aseprite file,
@@ -33,8 +35,9 @@
 /// <see cref="SpriteEffects"/> that will determine the flip direction of the sprite,
 /// -or- <see langword="null"/>, to use an effect based on player direction and gravity.
 /// </param>
-public readonly ref struct AnimationOptions(
-  [CanBeNull] string tagName,
+[PublicAPI]
+public readonly struct AnimationOptions(
+  string? tagName,
   int? frameIndex = null,
   float speed = 1,
   float rotation = 0,
@@ -42,7 +45,7 @@ public readonly ref struct AnimationOptions(
   bool? isReversed = null,
   bool? isPingPong = null,
   SpriteEffects? effects = null) {
-  [CanBeNull] public readonly string TagName = tagName;
+  public readonly string? TagName = tagName;
   public int? FrameIndex { get; init; } = frameIndex;
   public float Speed { get; init; } = speed;
   public float Rotation { get; init; } = rotation;

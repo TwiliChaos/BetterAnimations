@@ -1,4 +1,5 @@
 using AnimLib.Abilities;
+using JetBrains.Annotations;
 
 namespace AnimLib.Projectiles;
 
@@ -7,9 +8,14 @@ namespace AnimLib.Projectiles;
 /// </summary>
 [PublicAPI]
 public abstract class AbilityProjectile : ModProjectile {
-  private Ability _ability;
+  protected AbilityProjectile() {
+   _aPlayer = new Lazy<AnimPlayer>(() => Main.player[Projectile.owner].GetModPlayer<AnimPlayer>());
+   _ability = new Lazy<Ability>(() => _aPlayer.Value.Characters[Mod].AbilityManager![Id]);
+  }
 
-  private AnimPlayer _aPlayer;
+  private Lazy<AnimPlayer> _aPlayer;
+
+  private Lazy<Ability> _ability;
 
   /// <summary>
   /// Correlates to a <see cref="Ability.Id"/>.
@@ -27,13 +33,13 @@ public abstract class AbilityProjectile : ModProjectile {
   /// <summary>
   /// THe <see cref="AnimPlayer"/> that this <see cref="AbilityProjectile"/> belongs to.
   /// </summary>
-  public AnimPlayer APlayer => _aPlayer ??= Main.player[Projectile.owner].GetModPlayer<AnimPlayer>();
+  public AnimPlayer APlayer => _aPlayer.Value;
 
   /// <summary>
   /// The <see cref="Abilities.Ability"/> that this <see cref="AbilityProjectile"/> belongs to.
   /// </summary>
   public Ability Ability {
-    get => _ability ??= APlayer.Characters[Mod].AbilityManager?[Id];
-    internal set => _ability = value;
+    get => _ability.Value;
+    internal set => _ability = new Lazy<Ability>(value);
   }
 }

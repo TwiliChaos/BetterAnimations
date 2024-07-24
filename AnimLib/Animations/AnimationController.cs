@@ -1,4 +1,5 @@
-﻿using AnimLib.Extensions;
+using AnimLib.Extensions;
+using JetBrains.Annotations;
 
 namespace AnimLib.Animations;
 
@@ -27,15 +28,14 @@ public abstract partial class AnimationController {
   /// This <see cref="Animation"/>'s <see cref="AnimSpriteSheet"/> must contain all tracks that can be used.
   /// <para>By default, this is the first <see cref="Animation"/> in <see cref="Animations"/>.</para>
   /// </summary>
-  public Animation MainAnimation { get; private set; }
+  public Animation? MainAnimation { get; private set; }
 
 
   /// <summary>
   /// The name of the animation track currently playing. This value cannot be set to a null or whitespace value.
   /// </summary>
   /// <exception cref="ArgumentException">A set operation cannot be performed with a null or whitespace value.</exception>
-  [NotNull]
-  public string TagName { get; private set; } = string.Empty;
+  public string CurrentTagName { get; private set; } = string.Empty;
 
   /// <summary>
   /// Current index of the <see cref="AnimTag"/> being played.
@@ -79,7 +79,7 @@ public abstract partial class AnimationController {
 
   /// <summary>
   /// Allows you to do things after this <see cref="AnimationController"/> is constructed.
-  /// Useful for getting references to <see cref="Animation"/>s via <see cref="AddAnimation"/>.
+  /// Useful for getting references to <see cref="Animation"/>s via <see cref="RegisterAnimation"/>.
   /// </summary>
   public virtual void Initialize() { }
 
@@ -119,8 +119,7 @@ public abstract partial class AnimationController {
   /// </summary>
   /// <returns>The <see cref="Animation"/> with the matching <see cref="AnimSpriteSheet"/>.</returns>
   /// <exception cref="ArgumentNullException"><paramref name="spriteSheet"/> cannot be null.</exception>
-  [NotNull]
-  public Animation AddAnimation([NotNull] AnimSpriteSheet spriteSheet) {
+  public Animation RegisterAnimation(AnimSpriteSheet spriteSheet) {
     ArgumentNullException.ThrowIfNull(spriteSheet);
     if (spriteSheet.Tags.Length == 0) {
       throw new ArgumentException("The provided Sprite Sheet requires Animation Tags in the Aseprite file.",
@@ -130,7 +129,7 @@ public abstract partial class AnimationController {
     Animation animation = new(this, spriteSheet);
     if (Animations.Count == 0) {
       MainAnimation = animation;
-      SetTrack(spriteSheet.Tags[0].Name);
+      SetTag(spriteSheet.Tags[0].Name);
     }
 
     Animations.Add(animation);
@@ -144,7 +143,7 @@ public abstract partial class AnimationController {
   /// <param name="animation">Animation to set this player's <see cref="MainAnimation"/> to.</param>
   /// <param name="track">Optional track to set this to.</param>
   /// <exception cref="ArgumentNullException"><paramref name="animation"/> is null.</exception>
-  public void SetMainAnimation([NotNull] Animation animation, [CanBeNull] string track) {
+  public void SetMainAnimation(Animation animation, string? track) {
     ArgumentNullException.ThrowIfNull(animation);
     if (track is not null) {
       if (!animation.SpriteSheet.TagDictionary.ContainsKey(track)) {
@@ -156,11 +155,16 @@ public abstract partial class AnimationController {
   }
 
   internal void UpdateAnimation(AnimationOptions options) {
-    string tagName = options.TagName;
-    ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+    ArgumentException.ThrowIfNullOrWhiteSpace(options.TagName);
 
-    if (!MainAnimation.SpriteSheet.TagDictionary.TryGetValue(tagName, out AnimTag tag)) {
-      string message = $"\"{tagName}\" is not a valid key for the main Animation track.";
+    if (MainAnimation is null) {
+      return;
+    }
+
+    Animation anim = MainAnimation;
+
+    if (!anim.TryGetTag(options.TagName, out AnimTag? tag)) {
+      string message = $"\"{options.TagName}\" is not a valid key for the main Animation track.";
       throw new ArgumentException(message, nameof(options));
     }
 
@@ -176,8 +180,8 @@ public abstract partial class AnimationController {
     SpriteRotation = options.Rotation;
     Effects = options.Effects ?? SpriteEffectsFromPlayer();
 
-    if (tagName != TagName) {
-      SetTrack(tagName, options.IsReversed);
+    if (options.TagName != CurrentTagName) {
+      SetTag(options.TagName, options.IsReversed);
     }
 
     if (options.FrameIndex.HasValue) {
@@ -186,7 +190,7 @@ public abstract partial class AnimationController {
     }
     else {
       // Loop logic
-      PostPlay(options.Speed, options.LoopCount, options.IsReversed, options.IsPingPong);
+      PostPlay(options);
     }
 
     if (AnimPlayer.Local?.DebugEnabled ?? false) {
@@ -205,11 +209,10 @@ public abstract partial class AnimationController {
     return effects;
   }
 
-  private void PostPlay(float speed, int? overrideLoopCount, bool? overrideIsReversed,
-    bool? overrideIsPingPong) {
+  private void PostPlay(AnimationOptions options) {
     const float delta = 1f / 60f; // TODO: High FPS Support
-    float duration = MainAnimation.CurrentFrame.Duration;
-    float newFrameTime = FrameTime + speed * delta;
+    float duration = MainAnimation!.CurrentFrame.Duration;
+    float newFrameTime = FrameTime + options.Speed * delta;
 
     // Do nothing if not enough time has passed to advance to the next frame
     if (newFrameTime < duration || duration <= 0) {
@@ -220,9 +223,9 @@ public abstract partial class AnimationController {
     // Calculate number of frames to advance
     AnimTag tag = MainAnimation.CurrentTag;
     var frames = tag.Frames;
-    int loopCount = overrideLoopCount ?? tag.LoopCount;
-    bool isReversed = overrideIsReversed ?? tag.IsReversed;
-    bool isPingPong = overrideIsPingPong ?? tag.IsPingPong;
+    int loopCount = options.LoopCount ?? tag.LoopCount;
+    bool isReversed = options.IsReversed ?? tag.IsReversed;
+    bool isPingPong = options.IsPingPong ?? tag.IsPingPong;
 
     int lastFrame = frames.Length - 1;
 
@@ -256,9 +259,9 @@ public abstract partial class AnimationController {
     FrameTime = newFrameTime;
   }
 
-  internal void SetTrack(string newTrack, bool? isReversed = null) {
-    TagName = newTrack;
-    AnimTag track = MainAnimation.SpriteSheet.TagDictionary[newTrack];
+  internal void SetTag(string newTrack, bool? isReversed = null) {
+    CurrentTagName = newTrack;
+    AnimTag track = MainAnimation!.SpriteSheet.TagDictionary[newTrack];
     FrameTime = 0;
     Reversed = isReversed ?? track.IsReversed;
     FrameIndex = Reversed ? track.Frames.Length - 1 : 0;

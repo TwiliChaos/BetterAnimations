@@ -12,7 +12,7 @@ public record AnimTag(AnimFrame[] _frames, string Name, int LoopCount, bool IsRe
   /// <summary>
   /// The name of the animation, as defined in the Aseprite file.
   /// </summary>
-  public string Name { get; init; } = Name;
+  public readonly string Name = Name;
 
   /// <summary>
   /// Number of times the animation will play before stopping, as defined in the Aseprite file.
@@ -41,5 +41,3 @@ public record AnimTag(AnimFrame[] _frames, string Name, int LoopCount, bool IsRe
     return new AnimTag(frames, aseTag.Name, aseTag.LoopCount, aseTag.IsReversed, aseTag.IsPingPong);
   }
 }
-
-// AnimLib copy of AsepriteDotNet class so that mods dependent on AnimLib don't need to access AsepriteDotNet assembly

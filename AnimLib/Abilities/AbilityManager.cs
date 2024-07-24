@@ -1,8 +1,7 @@
 using System.Collections;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using JetBrains.Annotations;
 using Terraria.ModLoader.IO;
-using NotNull = JetBrains.Annotations.NotNullAttribute;
 
 namespace AnimLib.Abilities;
 
@@ -15,6 +14,10 @@ namespace AnimLib.Abilities;
 [PublicAPI]
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract partial class AbilityManager : IEnumerable<Ability> {
+  protected AbilityManager() {
+    _animPlayer = new Lazy<AnimPlayer>(() => Player.GetModPlayer<AnimPlayer>());
+  }
+
   /// <summary>
   /// Gets the Ability of type <typeparamref name="T"/>.
   /// </summary>
@@ -22,7 +25,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <returns>The <see cref="Ability"/> of type <typeparamref name="T"/>.</returns>
   /// <exception cref="ArgumentException"><typeparamref name="T"/> does not belong to this <see cref="Mod"/></exception>
   public T Get<T>() where T : Ability =>
-    (T)AbilityArray.FirstOrDefault(a => a is T)
+    (T?)AbilityArray.FirstOrDefault(a => a is T)
     ?? throw new ArgumentException($"{typeof(T).Name} does not belong to {Mod}");
 
   #region Properties - Common
@@ -32,17 +35,15 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <summary>
   /// Array of <see cref="Ability"> Abilities </see> in this <see cref="AbilityManager"/>.
   /// </summary>
-  [NotNull] protected internal Ability[] AbilityArray;
+  protected internal Ability[] AbilityArray = [];
 
   /// <summary>
   /// The <see cref="Terraria.Player"/> that this <see cref="AbilityManager"/> belongs to.
   /// </summary>
-  [NotNull]
   public Player Player => Entity;
 
-  [NotNull]
-  internal AnimPlayer AnimPlayer => _animPlayer ??= Player.GetModPlayer<AnimPlayer>();
-  private AnimPlayer _animPlayer;
+  internal AnimPlayer AnimPlayer => _animPlayer.Value;
+  private readonly Lazy<AnimPlayer> _animPlayer;
 
   // ReSharper restore NotNullMemberIsNotInitialized
 
@@ -52,9 +53,9 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <param name="id">Index that corresponds to an <see cref="Ability.Id"/>.</param>
   /// <returns>An <see cref="Ability"/> with the matching <see cref="Ability.Id"/>.</returns>
   /// <exception cref="System.ArgumentOutOfRangeException">The value does not match any <see cref="Ability.Id"/>.</exception>
-  [NotNull] public Ability this[int id] =>
+  public Ability this[int id] =>
     AbilityArray.FirstOrDefault(a => a.Id == id)
-    ?? throw new ArgumentOutOfRangeException($"No ability matches {id}");
+    ?? throw new ArgumentOutOfRangeException($"No ability ID matches {id}");
 
   /// <summary>
   /// Gets the <see cref="Ability"/> whose <see cref="Ability.Id"/> is associated with the given <paramref name="key"/>.
@@ -66,7 +67,8 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// otherwise, <see langword="null"/>.
   /// </param>
   /// <returns><see langword="true"/> if an <see cref="Ability"/> has an <see cref="Ability.Id"/> matching <paramref name="key"/>; otherwise, <see langword="false"/>.</returns>
-  public bool TryGet(int key, [NotNullWhen(true)] out Ability ability) => (ability = AbilityArray.FirstOrDefault(a => a.Id == key)) != null;
+  public bool TryGet(int key, [NotNullWhen(true)] out Ability? ability) =>
+    (ability = AbilityArray.FirstOrDefault(a => a.Id == key)) is not null;
 
   /// <summary>
   /// Returns an enumerator that iterates through all <see cref="Ability"/> instances in this <see cref="AbilityManager"/>.
@@ -80,9 +82,11 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// Provides an enumerator that supports iterating through all unlocked <see cref="Ability"/> instances in this <see cref="AbilityManager"/>.
   /// </summary>
   public IEnumerable<Ability> UnlockedAbilities => this.Where(ability => ability.Unlocked);
+
   #endregion
 
   #region Properties - Mod-defined (Get-only properties defined by mods that should not change)
+
   /// <summary>
   /// Whether to automatically save ability data during <see cref="ModPlayer.SaveData"/>.
   /// If <see langword="true"/>, this will save ability data in <see cref="AnimLibMod"/>.
@@ -90,9 +94,11 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// </summary>
   [Obsolete]
   public virtual bool AutoSave => true;
+
   #endregion
 
   #region Properties - Runtime (Properties expected to change throughout the ability manager's lifespan)
+
   /// <summary>
   /// Whether this ability needs to be synced.
   /// </summary>
@@ -117,16 +123,19 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// with this <see cref="Animations.AnimationController"/> is active.
   /// </summary>
   public readonly HashSet<string> AnimCompatSystemBlocklist = [];
+
   #endregion
 
   #region Methods - Mod-defined
+
   // Methods defined by other mods (abstract or empty virtual methods) are kept in this region.
 
   /// <summary>
   /// Called during <see cref="ModPlayer.Initialize"> ModPlayer.Initialize() </see>, after <see cref="AbilityManager.Initialize"> AbilityManager.Initialize() </see>
   /// Abilities are initialized in order of their <see cref="Ability.Id"/>, from lowest to highest.
   /// </summary>
-  public virtual void Initialize() { }
+  public virtual void Initialize() {
+  }
 
   /// <summary>
   /// Condition for if the player can use any abilities. By default returns <see langword="true"/> as long as the player is alive.
@@ -134,9 +143,11 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// </summary>
   /// <returns><see langword="true"/> if any ability can be used; otherwise, <see langword="false"/>.</returns>
   public virtual bool CanUseAnyAbilities() => !Player.dead;
+
   #endregion
 
   #region Update logic
+
   /// <summary>
   /// Physics update method
   /// <para>Can be used for synchronized player movement modifications</para>
@@ -145,7 +156,8 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// <see cref="CanUseAnyAbilities"/> is false
   /// </para>
   /// </summary>
-  public virtual void PhysicsPreUpdate() { }
+  public virtual void PhysicsPreUpdate() {
+  }
 
   /// <summary>
   /// Update loop for abilities.
@@ -211,9 +223,11 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
         levelable.Level = 0;
     }
   }
+
   #endregion
 
   #region Serializing
+
   /// <summary>
   /// Serializes all <see cref="Ability"/> data into a new <see cref="TagCompound"/> and returns it.
   /// If <see cref="AutoSave"/> is <see langword="false"/>, you will want to call this in <see cref="ModPlayer.SaveData" />
@@ -222,8 +236,10 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   public TagCompound Save() {
     TagCompound tag = [];
     foreach (Ability ability in this) {
-      TagCompound abilityTag = ability.Save();
-      if (abilityTag is null) continue;
+      TagCompound? abilityTag = ability.Save();
+      if (abilityTag is null) {
+        continue;
+      }
 
       tag.Add(ability.GetType().Name, abilityTag);
     }
@@ -237,7 +253,8 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// Allows to add additional data to tag compound for that ability manager
   /// </summary>
   /// <param name="tag"> An instance of <see cref="TagCompound"/> containing <see cref="Ability"/> save data. </param>
-  public virtual void SaveCustomAbilityData(TagCompound tag) { }
+  public virtual void SaveCustomAbilityData(TagCompound tag) {
+  }
 
   /// <summary>
   /// Deserializes all <see cref="Ability"/> data from the given <see cref="TagCompound"/>.
@@ -250,6 +267,7 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
       TagCompound aTag = tag.Get<TagCompound>(name);
       ability.Load(aTag);
     }
+
     LoadCustomAbilityData(tag);
   }
 
@@ -257,6 +275,8 @@ public abstract partial class AbilityManager : IEnumerable<Ability> {
   /// Allows to get additional data from tag compound for that ability manager
   /// </summary>
   /// <param name="tag"> An instance of <see cref="TagCompound"/> containing <see cref="Ability"/> save data. </param>
-  public virtual void LoadCustomAbilityData(TagCompound tag) { }
+  public virtual void LoadCustomAbilityData(TagCompound tag) {
+  }
+
   #endregion
 }

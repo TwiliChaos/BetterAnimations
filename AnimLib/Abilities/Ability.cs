@@ -1,5 +1,6 @@
 using System.IO;
 using AnimLib.Projectiles;
+using JetBrains.Annotations;
 using Terraria.ModLoader.IO;
 
 namespace AnimLib.Abilities;
@@ -21,28 +22,31 @@ public abstract class Ability<TManager> : Ability where TManager : AbilityManage
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract partial class Ability {
   #region Properties - Common
+
   // Initialized properties that are set by AnimLib are kept in this region.
 
   /// <summary>
   /// The player that this ability belongs to.
   /// </summary>
   // ReSharper disable once NotNullMemberIsNotInitialized
-  [NotNull]
   public Player Player => Entity;
 
   /// <summary>
   /// The <see cref="AbilityManager"/> that this ability belongs to.
   /// </summary>
-  // ReSharper disable once NotNullMemberIsNotInitialized
-  [NotNull] public virtual AbilityManager Abilities { get; internal set; }
+#pragma warning disable CS8618 // This value is always assigned in AnimLoader, and cannot be assigned earlier.
+  public virtual AbilityManager Abilities { get; internal set; }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
   /// <summary>
   /// <see langword="true"/> if this ability belongs to the client <see cref="Player"/> instance.
   /// </summary>
   public bool IsLocal => Player.whoAmI == Main.myPlayer;
+
   #endregion
 
   #region Properties - Mod-defined
+
   // Initialized properties that are set by other mods (virtual or abstract properties) are kept in this region.
 
   /// <summary>
@@ -78,10 +82,12 @@ public abstract partial class Ability {
   /// The ability whose level is responsible for this abilities' level. By default, this ability.
   /// <para>Override this if this ability's <see cref="Level"/> is dependent on a different <see cref="Ability"/>'s <see cref="Level"/>.</para>
   /// </summary>
-  public virtual ILevelable LevelableDependency => this as ILevelable;
+  public virtual ILevelable? LevelableDependency => this as ILevelable;
+
   #endregion
 
   #region Properties - Runtime
+
   // Properties that are expected to change throughout the ability's lifespan are kept in this region.
   /// <summary>
   /// Condition required for the player to activate this ability.
@@ -106,9 +112,11 @@ public abstract partial class Ability {
   /// Whether the player has access to this ability. When <see langword="false"/>, the player cannot use this ability.
   /// </summary>
   public virtual bool Unlocked => true;
+
   #endregion
 
   #region State Management
+
   /// <summary>
   /// Current <see cref="AbilityState"/> of the ability.
   /// <para>Setting this value is done with <see cref="SetState(AbilityState, bool)"/>. This should only be done within <see cref="PreUpdate"/>.</para>
@@ -163,9 +171,11 @@ public abstract partial class Ability {
   /// </summary>
   /// <value> <see langword="true"/> if the state is either <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>, otherwise <see langword="false"/>. </value>
   public bool InUse => Starting || Active || Ending;
+
   #endregion
 
   #region Cooldown Management
+
   /// <summary>
   /// Cooldown of the ability. Indicates the amount of time, in frames, that must pass after ability activation before the ability can be used again.
   /// This is <see langword="0"/> by default.
@@ -220,10 +230,13 @@ public abstract partial class Ability {
   /// <summary>
   /// Logic that executes immediately after <see cref="EndCooldown"/> is called.
   /// </summary>
-  public virtual void OnRefreshed() { }
+  public virtual void OnRefreshed() {
+  }
+
   #endregion
 
   #region Update
+
   /// <summary>
   /// Calls all UpdateX methods in this class.
   /// <para>Called in <see cref="ModPlayer.PostUpdateRunSpeeds"/>, directly after <see cref="PreUpdate"/>.</para>
@@ -251,7 +264,8 @@ public abstract partial class Ability {
   /// Called during <see cref="ModPlayer.Initialize"> ModPlayer.Initialize() </see>, after <see cref="AbilityManager.Initialize"> AbilityManager.Initialize() </see>
   /// Abilities are initialized in order of their <see cref="Ability.Id"/>, from lowest to highest.
   /// </summary>
-  public virtual void Initialize() { }
+  public virtual void Initialize() {
+  }
 
   /// <summary>
   /// Called in <see cref="ModPlayer.PostUpdateRunSpeeds"/>, directly before <see cref="Update"/>.
@@ -261,47 +275,56 @@ public abstract partial class Ability {
   /// As some changes are only possible to make on the local client (i.e. dependent on player input), the only changes made in this method should be to state.
   /// If some other changes must be made here and not in any Update methods, they must be synced in <see cref="ReadPacket(BinaryReader)"/> and <see cref="WritePacket(ModPacket)"/>.
   /// </remarks>
-  public virtual void PreUpdate() { }
+  public virtual void PreUpdate() {
+  }
 
 
   /// <summary>
   /// Called before <see cref="Update"/> when this <see cref="AbilityState"/> is <see cref="AbilityState.Starting"/>.
   /// </summary>
-  public virtual void UpdateStarting() { }
+  public virtual void UpdateStarting() {
+  }
 
   /// <summary>
   /// Called before <see cref="Update"/> when this <see cref="AbilityState"/> is <see cref="AbilityState.Active"/>.
   /// <para>It is recommended to make any changes to <c> player.control* </c> in <see cref="UpdateUsing"/>, if it is overridden.</para>
   /// </summary>
-  public virtual void UpdateActive() { }
+  public virtual void UpdateActive() {
+  }
 
   /// <summary>
   /// Called before <see cref="Update"/> when this <see cref="AbilityState"/> is <see cref="AbilityState.Ending"/>.
   /// </summary>
-  public virtual void UpdateEnding() { }
+  public virtual void UpdateEnding() {
+  }
 
   /// <summary>
   /// Called directly after <see cref="UpdateStarting"/>, <see cref="UpdateActive"/>, and <see cref="UpdateEnding"/>.
   /// <para>Any modifications to <c> player.control* </c> should be at the end of this method.</para>
   /// </summary>
-  public virtual void UpdateUsing() { }
+  public virtual void UpdateUsing() {
+  }
 
   /// <summary>
   /// Called after all other Abilities are updated. This is called regardless of current <see cref="AbilityState"/>.
   /// </summary>
-  public virtual void PostUpdateAbilities() { }
+  public virtual void PostUpdateAbilities() {
+  }
 
   /// <summary>
   /// Called in <see cref="ModPlayer.PostUpdate"/>. This is called regardless of current <see cref="AbilityState"/>.
   /// </summary>
-  public virtual void PostUpdate() { }
+  public virtual void PostUpdate() {
+  }
+
   #endregion
 
   #region Networking
+
   /// <summary>
   /// For <see cref="Networking.AbilityPacketHandler"/>.
   /// </summary>
-  internal void PreReadPacket([NotNull] BinaryReader r) {
+  internal void PreReadPacket(BinaryReader r) {
     if (LevelableDependency != null)
       LevelableDependency.Level = r.ReadInt32();
     State = (AbilityState)r.ReadByte();
@@ -312,7 +335,7 @@ public abstract partial class Ability {
   /// <summary>
   /// For <see cref="Networking.AbilityPacketHandler"/>.
   /// </summary>
-  internal void PreWritePacket([NotNull] ModPacket packet) {
+  internal void PreWritePacket(ModPacket packet) {
     if (LevelableDependency != null)
       packet.Write(LevelableDependency.Level);
     packet.Write((byte)State);
@@ -323,23 +346,26 @@ public abstract partial class Ability {
   /// <summary>
   /// Ability-specific data to read from packet. Use in conjunction with <see cref="WritePacket(ModPacket)"/>.
   /// </summary>
-  public virtual void ReadPacket([NotNull] BinaryReader r) { }
+  public virtual void ReadPacket(BinaryReader r) {
+  }
 
   /// <summary>
   /// Ability-specific data to write to packet. Use in conjunction with <see cref="ReadPacket(BinaryReader)"/>.
   /// </summary>
-  public virtual void WritePacket([NotNull] ModPacket packet) { }
+  public virtual void WritePacket(ModPacket packet) {
+  }
+
   #endregion
 
   #region Serializing
+
   /// <summary>
   /// Save data that is specific to this <see cref="Ability"/>.
   /// By default, saves the ability's level, if it implements <see cref="ILevelable"/>.
   /// </summary>
   /// <returns>A <see cref="TagCompound"/> with data specific to this <see cref="Ability"/>.</returns>
   /// <seealso cref="Load"/>
-  [CanBeNull]
-  public virtual TagCompound Save() {
+  public virtual TagCompound? Save() {
     if (this is ILevelable levelable) {
       return new TagCompound {
         [nameof(Level)] = levelable.Level
@@ -355,12 +381,14 @@ public abstract partial class Ability {
   /// </summary>
   /// <param name="tag">The tag to load ability data from.</param>
   /// <seealso cref="Save"/>
-  public virtual void Load([NotNull] TagCompound tag) {
+  public virtual void Load(TagCompound tag) {
     if (this is ILevelable levelable) levelable.Level = tag.GetInt(nameof(Level));
   }
+
   #endregion
 
   #region Misc
+
   /// <summary>
   /// Creates a new <see cref="AbilityProjectile"/> of type <typeparamref name="T"/>.
   /// Assigns <see cref="AbilityProjectile.Ability"/> to this ability, and <see cref="AbilityProjectile.Level"/> if this ability is <see cref="ILevelable"/>.
@@ -371,10 +399,12 @@ public abstract partial class Ability {
   /// <param name="knockBack">Knockback strength of the projectile.</param>
   /// <typeparam name="T">Type of ability projectile.</typeparam>
   /// <returns>A new <see cref="AbilityProjectile"/> of type <typeparamref name="T"/>.</returns>
-  public T NewAbilityProjectile<T>(Vector2 offset = default, Vector2 velocity = default, int damage = 0, float knockBack = 0)
+  public T NewAbilityProjectile<T>(Vector2 offset = default, Vector2 velocity = default, int damage = 0,
+    float knockBack = 0)
     where T : AbilityProjectile {
     int type = ModContent.ProjectileType<T>();
-    Projectile projectile = Projectile.NewProjectileDirect(Player.GetSource_FromThis(), Player.Center + offset, velocity, type, damage, knockBack, Player.whoAmI);
+    Projectile projectile = Projectile.NewProjectileDirect(Player.GetSource_FromThis(), Player.Center + offset,
+      velocity, type, damage, knockBack, Player.whoAmI);
 
     T modProjectile = (T)projectile.ModProjectile;
     modProjectile.Ability = this;
@@ -388,7 +418,7 @@ public abstract partial class Ability {
   /// </summary>
   /// <returns>String with ID, name, level and max level, current time, and cooldown if applicable.</returns>
   public override string ToString() =>
-    $"Ability ID:{Id} Name:{GetType().Name} " +
+    $"ID:{Id} Name:{Name} " +
     $"(Level {Level}{(this is ILevelable levelable ? $"/{levelable.MaxLevel}" : string.Empty)}) " +
     $"Player:{Player.whoAmI} State:{State} " +
     $"Time:{StateTime} " +
@@ -398,11 +428,13 @@ public abstract partial class Ability {
   /// Whether the <see cref="Ability"/> is in use.
   /// </summary>
   /// <seealso cref="InUse"/>
-  public static implicit operator bool(Ability ability) => ability is not null && ability.InUse;
+  public static implicit operator bool(Ability? ability) => ability is not null && ability.InUse;
+
   #endregion
 }
 
 // ReSharper disable once InconsistentNaming
+// This class exists bc ReSharper will complain about solution not having any ILevelable abilities
 internal class __LevelableAbility : Ability, ILevelable {
   private int _level;
   public override int Id => -1;

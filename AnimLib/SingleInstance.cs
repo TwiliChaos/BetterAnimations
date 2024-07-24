@@ -1,3 +1,5 @@
+using JetBrains.Annotations;
+
 namespace AnimLib;
 
 /// <summary>
@@ -7,42 +9,26 @@ namespace AnimLib;
 /// <typeparam name="T">The type to make Singleton.</typeparam>
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract class SingleInstance<T> where T : SingleInstance<T> {
-  // ReSharper disable once StaticMemberInGenericType
-  private static readonly object Lock = new();
-  private static T _instance;
+  private static readonly Lazy<T> LazyInstance = new(Initialize);
 
   /// <summary>
   /// The singleton instance of this type.
   /// </summary>
-  public static T Instance {
-    get {
-      if (_instance is null) Initialize();
-      return _instance;
-    }
+  public static T Instance => LazyInstance.Value;
+
+  private static T Initialize() {
+    AnimLibMod.OnUnload += Unload;
+    return Activator.CreateInstance<T>();
   }
 
-  /// <summary>
-  /// Creates a new instance of <typeparamref name="T"/> if it does not already exist, and returns the instance.
-  /// </summary>
-  /// <returns>The value of <see cref="Instance"/>.</returns>
-  public static T Initialize() {
-    if (_instance is not null) return _instance;
-    lock (Lock) {
-      if (_instance is not null) return _instance;
-      _instance = (T)Activator.CreateInstance(typeof(T), true);
-      AnimLibMod.OnUnload += Unload;
-    }
-
-    return _instance;
-  }
-
-  /// <summary>
-  /// Sets the static reference of <see cref="SingleInstance{T}"/> to <see langword="null"/>.
-  /// Calls <see cref="IDisposable.Dispose"/> first, if applicable.
-  /// </summary>
   private static void Unload() {
+    if (!LazyInstance.IsValueCreated) {
+      return;
+    }
+
     // ReSharper disable once SuspiciousTypeConversion.Global
-    if (_instance is IDisposable disposable) disposable.Dispose();
-    _instance = null;
+    if (LazyInstance.Value is IDisposable disposable) {
+      disposable.Dispose();
+    }
   }
 }

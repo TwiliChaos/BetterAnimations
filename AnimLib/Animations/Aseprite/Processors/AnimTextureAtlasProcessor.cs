@@ -28,8 +28,7 @@ public static class AnimTextureAtlasProcessor {
   /// </param>
   /// <returns>A Dictionary of root-level layers where each key is the layer name and the value is a flattened representation of that layer.</returns>
   /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null"/>.</exception>
-  public static Dictionary<string, AnimTextureAtlas>
-    Process(AsepriteFile file, [CanBeNull] ProcessorOptions options = null) {
+  public static Dictionary<string, AnimTextureAtlas> Process(AsepriteFile file, ProcessorOptions? options = null) {
     ArgumentNullException.ThrowIfNull(file);
     options ??= ProcessorOptions.Default;
 
@@ -56,8 +55,7 @@ public static class AnimTextureAtlasProcessor {
 
       for (int rootLayerIndex = 0; rootLayerIndex < frameColorData.Length; rootLayerIndex++) {
         var colorData = frameColorData[rootLayerIndex];
-        bool isEmpty = colorData is null;
-        allFrames[rootLayerIndex].Frames[frameIndex] = new FrameEntry(frameIndex, rootLayerIndex, colorData, isEmpty);
+        allFrames[rootLayerIndex].Frames[frameIndex] = new FrameEntry(frameIndex, rootLayerIndex, colorData);
       }
     }
 
@@ -67,8 +65,7 @@ public static class AnimTextureAtlasProcessor {
   private static AsepriteLayer[] GetRootLayers(AsepriteFile file, ProcessorOptions options) {
     var rootLayers = new List<AsepriteLayer>(file.Layers.Length);
 
-    for (int i = 0; i < file.Layers.Length; i++) {
-      AsepriteLayer layer = file.Layers[i];
+    foreach (AsepriteLayer layer in file.Layers) {
       if (layer.ChildLevel == 0 &&
           layer is not AsepriteGroupLayer { Children.Length: 0 } &&
           (layer.IsVisible || !options.OnlyVisibleLayers) &&
@@ -86,13 +83,14 @@ public static class AnimTextureAtlasProcessor {
 
     // Allows upscaling during import, so art created at 1px is upscaled to the 2x2 pixel thing Terraria does
     // TODO: Better handling of Aseprite sprite UserData properties.
+    // Maybe see if we can custom plugins for the Aseprite program just for UserData properties
     bool upscale = file.UserData.Text?.Contains("upscale", StringComparison.OrdinalIgnoreCase) ?? false;
     int scale = upscale ? 2 : 1;
 
     foreach ((string name, var frames) in allFrames) {
       int frameCount = frames.Length;
 
-      Dictionary<int, int> duplicateMap = null;
+      Dictionary<int, int>? duplicateMap = null;
       if (options.MergeDuplicateFrames) {
         duplicateMap = GetDuplicateMap(frames);
         frameCount -= duplicateMap.Count;
@@ -190,7 +188,7 @@ public static class AnimTextureAtlasProcessor {
 
       for (int d = 0; d < i; d++) {
         // Expensive checks
-        if (IsDuplicate(layerFrames[i], layerFrames[d])) {
+        if (IsDuplicate(frame, layerFrames[d])) {
           duplicateMap.Add(i, d);
           break;
         }
@@ -208,7 +206,7 @@ public static class AnimTextureAtlasProcessor {
       return false;
     }
 
-    var firstData = firstFrame.ColorData;
+    var firstData = firstFrame.ColorData!;
     var secondData = secondFrame.ColorData;
 
     // Attempt early terminations by comparing sparse individual pixels of the texture
@@ -256,4 +254,10 @@ public static class AnimTextureAtlasProcessor {
 
 internal record LayerEntry(string Name, FrameEntry[] Frames);
 
-internal readonly record struct FrameEntry(int FrameIndex, int RootLayerIndex, Rgba32[] ColorData, bool IsEmpty);
+internal readonly record struct FrameEntry(
+  int FrameIndex,
+  int RootLayerIndex,
+  Rgba32[]? ColorData) {
+  [MemberNotNullWhen(false, nameof(ColorData))]
+  public bool IsEmpty => ColorData is null;
+}

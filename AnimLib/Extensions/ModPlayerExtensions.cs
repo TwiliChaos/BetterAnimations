@@ -1,5 +1,6 @@
 using AnimLib.Abilities;
 using AnimLib.Animations;
+using JetBrains.Annotations;
 
 namespace AnimLib.Extensions;
 
@@ -13,10 +14,17 @@ public static class ModPlayerExtensions {
   /// </summary>
   /// <param name="modPlayer">Your <see cref="ModPlayer"/> instance.</param>
   /// <returns>The <see cref="AnimCharacter"/> instance of <paramref name="modPlayer"/> for your <see cref="Mod"/></returns>
-  [NotNull]
   public static AnimCharacter GetAnimCharacter(this ModPlayer modPlayer) {
+    ArgumentNullException.ThrowIfNull(modPlayer);
+
     AnimPlayer animPlayer = modPlayer.Player.GetModPlayer<AnimPlayer>();
-    return animPlayer.Characters.TryGetValue(modPlayer.Mod, out AnimCharacter c) ? c : throw ThrowHelper.NoType(modPlayer.Mod);
+    Mod mod = modPlayer.Mod;
+
+    if (!animPlayer.Characters.TryGetValue(mod, out AnimCharacter? c)) {
+      throw new ArgumentException($"Mod {mod.Name} has no AnimLib types.");
+    }
+
+    return c;
   }
 
   /// <summary>
@@ -26,6 +34,8 @@ public static class ModPlayerExtensions {
   /// <returns>An <see cref="AnimCharacterWrapper{T, T}"/> instance of <paramref name="modPlayer"/> for your <see cref="Mod"/></returns>
   public static AnimCharacterWrapper<TAnimation, TAbility> GetAnimCharacter<TAnimation, TAbility>(this ModPlayer modPlayer)
     where TAnimation : AnimationController where TAbility : AbilityManager {
+    ArgumentNullException.ThrowIfNull(modPlayer);
+    
     AnimCharacter character = GetAnimCharacter(modPlayer);
 
     return character.GetWrapped<TAnimation, TAbility>();

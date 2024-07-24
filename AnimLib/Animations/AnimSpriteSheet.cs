@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using JetBrains.Annotations;
 
 namespace AnimLib.Animations;
 
@@ -24,11 +25,14 @@ public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, Ani
   public IReadOnlyDictionary<string, AnimTextureAtlas> Atlases => _atlases;
 
   public ReadOnlySpan<Rectangle> GetAnimationFrames(string animation, string layer) {
-    if (!TagDictionary.TryGetValue(animation, out AnimTag tag)) {
+    ArgumentNullException.ThrowIfNull(animation);
+    ArgumentNullException.ThrowIfNull(layer);
+
+    if (!TagDictionary.TryGetValue(animation, out AnimTag? tag)) {
       throw new ArgumentException($"Animation with name \"{animation}\" does not exist.", nameof(animation));
     }
 
-    if (!Atlases.TryGetValue(layer, out AnimTextureAtlas atlas)) {
+    if (!Atlases.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
@@ -37,7 +41,10 @@ public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, Ani
     return atlas.Regions.Slice(start, frames.Length);
   }
 
-  public Rectangle GetAnimationRect([NotNull] string animation, [NotNull] string layer, int index) {
+  public Rectangle GetAnimationRect(string animation, string layer, int index) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(animation);
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+
     var frames = GetAnimationFrames(animation, layer);
 
     ArgumentOutOfRangeException.ThrowIfNegative(index);
@@ -46,23 +53,33 @@ public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, Ani
     return frames[index];
   }
 
-  public Rectangle GetAtlasRect([NotNull] string layer, int index) {
+  public Rectangle GetAtlasRect(string layer, int index) {
     ArgumentException.ThrowIfNullOrEmpty(layer);
-    if (!Atlases.TryGetValue(layer, out AnimTextureAtlas atlas)) {
+
+    if (!Atlases.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
     return atlas.GetRect(index);
   }
 
-  public Rectangle GetRectFromTimer(string layer, string animation, int duration) =>
-    GetRectFromTimer(layer, animation, duration / 60f);
+  public Rectangle GetRectFromTimer(string animation, string layer, int duration) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(animation);
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
-  public Rectangle GetRectFromTimer(string layer, string animation, float durationSeconds) {
-    if (!TagDictionary.TryGetValue(animation, out AnimTag tag)) {
+    return GetRectFromTimer(animation, layer, duration / 60f);
+  }
+
+  public Rectangle GetRectFromTimer(string animation, string layer, float durationSeconds) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(animation);
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+
+    if (!TagDictionary.TryGetValue(animation, out AnimTag? tag)) {
       throw new ArgumentException($"Animation with name \"{animation}\" does not exist.", nameof(animation));
     }
 
+    // TODO: Something not strictly linear
+    // This works for basic vfx that uses this AnimSpriteSheet to load with.
     int frameIndex = 0;
     var frames = GetAnimationFrames(animation, layer);
     var tagFrames = tag.Frames;

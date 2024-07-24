@@ -2,10 +2,9 @@
 
 namespace AnimLib.Abilities;
 
-public partial class Ability : ModType<Player, Ability>, IIndexed {
+public partial class Ability : ModType<Player, Ability> {
   public override Ability NewInstance(Player entity) {
     Ability newInstance = base.NewInstance(entity);
-    newInstance.Index = Index;
     return newInstance;
   }
 
@@ -13,7 +12,5 @@ public partial class Ability : ModType<Player, Ability>, IIndexed {
     AnimLoader.Add(this);
   }
 
-  protected override Player CreateTemplateEntity() => null;
-
-  public ushort Index { get; internal set; }
+  protected override Player CreateTemplateEntity() => null!;
 }

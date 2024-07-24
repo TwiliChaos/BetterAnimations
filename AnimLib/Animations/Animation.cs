@@ -1,4 +1,5 @@
-﻿using Terraria.DataStructures;
+using JetBrains.Annotations;
+using Terraria.DataStructures;
 using Terraria.ID;
 
 namespace AnimLib.Animations;
@@ -7,23 +8,23 @@ namespace AnimLib.Animations;
 /// Animation for a single player.
 /// This class uses runtime data from a <see cref="AnimationController"/> to retrieve values from an <see cref="AnimSpriteSheet"/>.
 /// One of these will be created for each <see cref="AnimationController"/> you have in your mod, per player.
-/// <para>To get an <see cref="Animation"/> instance from the player, use <see cref="AnimationController.AddAnimation"/>.</para>
+/// <para>To get an <see cref="Animation"/> instance from the player, use <see cref="AnimationController.RegisterAnimation"/>.</para>
 /// </summary>
 /// <remarks>
 /// This class is essentially the glue between your <see cref="AnimationController"/> and all your <see cref="AnimSpriteSheet"/>.
 /// </remarks>
 [PublicAPI]
-public sealed class Animation {
+public sealed partial class Animation {
   /// <summary>
   /// <see cref="AnimationController"/> this <see cref="Animation"/> belongs to. This is used to get the current <see cref="AnimTag"/>s and
   /// <see cref="AnimFrame"/>s.
   /// </summary>
-  [NotNull] public readonly AnimationController Controller;
+  public readonly AnimationController Controller;
 
   /// <summary>
   /// <see cref="AnimSpriteSheet"/> info used for this <see cref="Animation"/>.
   /// </summary>
-  [NotNull] public readonly AnimSpriteSheet SpriteSheet;
+  public readonly AnimSpriteSheet SpriteSheet;
 
   /// <summary>
   /// Creates a new instance of <see cref="Animation"/> for the given <see cref="AnimPlayer"/>, using the given <see cref="AnimSpriteSheet"/> and
@@ -32,7 +33,7 @@ public sealed class Animation {
   /// <param name="controller"><see cref="AnimationController"/> instance this will belong to.</param>
   /// <param name="spriteSheet"><see cref="AnimSpriteSheet"/> to determine which sprite is drawn.</param>
   /// <exception cref="System.InvalidOperationException">Animation classes are not allowed to be constructed on a server.</exception>
-  internal Animation([NotNull] AnimationController controller, [NotNull] AnimSpriteSheet spriteSheet) {
+  internal Animation(AnimationController controller, AnimSpriteSheet spriteSheet) {
     if (Main.netMode == NetmodeID.Server) {
       throw new InvalidOperationException("Animation classes are not allowed to be constructed on servers.");
     }
@@ -45,11 +46,11 @@ public sealed class Animation {
   /// <summary>
   /// Current <see cref="AnimTag"/> that is being played.
   /// <para>
-  /// If <see cref="AnimationController.TagName"/> is not a valid track name, this returns the first <see cref="AnimTag"/> in the
+  /// If <see cref="AnimationController.CurrentTagName"/> is not a valid track name, this returns the first <see cref="AnimTag"/> in the
   /// <see cref="AnimSpriteSheet"/>.
   /// </para>
   /// </summary>
-  public AnimTag CurrentTag => SpriteSheet.TagDictionary[Controller.TagName];
+  public AnimTag CurrentTag => SpriteSheet.TagDictionary[Controller.CurrentTagName];
 
   /// <summary>
   /// Current <see cref="AnimFrame"/> that is being played.
@@ -63,7 +64,10 @@ public sealed class Animation {
   /// <param name="layer">
   /// The name of the <see cref="AnimTextureAtlas"/> to get the <see cref="Rectangle"/> from.
   /// </param>
-  public Rectangle GetRect(string layer) => SpriteSheet.GetAtlasRect(layer, CurrentFrame.AtlasFrameIndex);
+  public Rectangle GetRect(string layer) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+    return SpriteSheet.GetAtlasRect(layer, CurrentFrame.AtlasFrameIndex);
+  }
 
   /// <summary>
   /// Texture of the <see cref="AnimTextureAtlas"/> whose name matches <param name="layer"/>
@@ -71,11 +75,11 @@ public sealed class Animation {
   /// <param name="layer">
   /// The name of the <see cref="AnimTextureAtlas"/> to get the <see cref="Texture2D"/> from.
   /// </param>
-  public Texture2D GetTexture([NotNull] string layer) {
-    ArgumentNullException.ThrowIfNull(layer);
+  public Texture2D GetTexture(string layer) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
     var textureAtlasMap = SpriteSheet.Atlases;
-    if (!textureAtlasMap.TryGetValue(layer, out AnimTextureAtlas atlas)) {
+    if (!textureAtlasMap.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
@@ -103,6 +107,8 @@ public sealed class Animation {
   /// <param name="layer">Name of the Atlas that the <paramref name="drawInfo"/> will be based on.</param>
   /// <returns>A <see cref="DrawData"/> based on this <see cref="Animation"/>.</returns>
   public DrawData GetDrawData(PlayerDrawSet drawInfo, string layer) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+
     Player player = drawInfo.drawPlayer;
     Texture2D texture = GetTexture(layer);
     Vector2 position = drawInfo.Position - Main.screenPosition + player.Size / 2;
@@ -111,5 +117,26 @@ public sealed class Animation {
     Vector2 origin = new(rect.Width / 2f, rect.Height / 2f);
 
     return new DrawData(texture, position, rect, Color.White, Controller.SpriteRotation, origin, 1, effect);
+  }
+
+  /// <summary>
+  /// Determines whether the <see cref="SpriteSheet"/> contains an <see cref="AnimTag"/> with the specified <paramref name="tagName"/>
+  /// </summary>
+  /// <param name="tagName">The name of the <see cref="AnimTag"/> to check.</param>
+  /// <returns></returns>
+  public bool ContainsTag(string tagName) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+    return SpriteSheet.TagDictionary.ContainsKey(tagName);
+  }
+
+  /// <summary>
+  /// Gets the <see cref="AnimTag"/> with the specified <see cref="AnimTag.Name"/>.
+  /// </summary>
+  /// <param name="tagName">The name of the <see cref="AnimTag"/> to retrieve.</param>
+  /// <param name="tag"></param>
+  /// <returns></returns>
+  public bool TryGetTag(string tagName, [NotNullWhen(true)] out AnimTag? tag) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+    return SpriteSheet.TagDictionary.TryGetValue(tagName, out tag);
   }
 }

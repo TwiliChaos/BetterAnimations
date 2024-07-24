@@ -13,16 +13,17 @@ public static class ArmorShaderDataGetSet {
 
   static ArmorShaderDataGetSet() {
     Type type = typeof(ArmorShaderData);
-    UColor = ClassHacking.GenerateGetter<ArmorShaderData, Vector3>(
-      type.GetField("_uColor", BindingFlags.Instance | BindingFlags.NonPublic));
-    USecondaryColor = ClassHacking.GenerateGetter<ArmorShaderData, Vector3>(
-      type.GetField("_uSecondaryColor", BindingFlags.Instance | BindingFlags.NonPublic));
-    USaturation = ClassHacking.GenerateGetter<ArmorShaderData, float>(
-      type.GetField("_uSaturation", BindingFlags.Instance | BindingFlags.NonPublic));
-    UOpacity = ClassHacking.GenerateGetter<ArmorShaderData, float>(
-      type.GetField("_uOpacity", BindingFlags.Instance | BindingFlags.NonPublic));
-    UTargetPosition = ClassHacking.GenerateGetter<ArmorShaderData, Vector2>(
-      type.GetField("_uTargetPosition", BindingFlags.Instance | BindingFlags.NonPublic));
+    UColor = GenerateGetter<Vector3>(type,"_uColor");
+    USecondaryColor = GenerateGetter<Vector3>(type,"_uSecondaryColor");
+    USaturation = GenerateGetter<float>(type,"_uSaturation");
+    UOpacity = GenerateGetter<float>(type,"_uOpacity");
+    UTargetPosition = GenerateGetter<Vector2>(type,"_uTargetPosition");
+    return;
+
+    Func<ArmorShaderData, TOut> GenerateGetter<TOut>(Type t, string fieldName) {
+      const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic;
+      return ClassHacking.GenerateGetter<ArmorShaderData, TOut>(t.GetField(fieldName, bindingFlags)!);
+    }
   }
 
   public static Color GetColor(this ArmorShaderData a) => new(UColor(a));

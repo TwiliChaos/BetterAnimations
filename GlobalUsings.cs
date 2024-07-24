@@ -8,7 +8,7 @@ global using System;
 global using System.Collections.Generic;
 
 // Code annotations
-global using JetBrains.Annotations;
+global using System.Diagnostics.CodeAnalysis;
 
 // Common XNA usings
 global using Microsoft.Xna.Framework;

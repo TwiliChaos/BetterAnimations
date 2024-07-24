@@ -26,7 +26,7 @@ internal abstract class PacketHandler {
   /// </summary>
   /// <param name="fromWho">The whoAmI of the player whose data will be in this packet.</param>
   protected ModPacket GetPacket(int fromWho) {
-    ModPacket packet = AnimLibMod.Instance.GetPacket();
+    ModPacket packet = AnimLibMod.Instance!.GetPacket();
     if (Main.netMode == NetmodeID.Server) packet.Write((ushort)fromWho);
     packet.Write(_handlerType);
     return packet;

@@ -10,10 +10,11 @@ internal static class TypeExtensions {
   public static string UniqueTypeName(this Type type) {
     ArgumentNullException.ThrowIfNull(type);
     string name = type.Name;
-    Type baseType = type;
+    Type? baseType = type;
     while ((baseType = baseType.BaseType) != null) {
-      if (baseType.Name == name)
-        return type.FullName;
+      if (baseType.Name == name) {
+        return type.FullName ?? name;
+      }
     }
 
     return name;

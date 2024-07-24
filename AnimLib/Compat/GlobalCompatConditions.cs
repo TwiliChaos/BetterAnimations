@@ -9,25 +9,25 @@ public static class GlobalCompatConditions {
   /// should be disabled, contains conditions, if any return true,
   /// associated flag is turned to false, if none - to true
   /// </summary>
-  [NotNull] private static readonly List<Predicate<Player>> DisableGraphicsOrPredicates = [];
+  private static readonly List<Predicate<Player>> DisableGraphicsOrPredicates = [];
 
   /// <summary>
   /// The <see cref="Predicate{Player}"/> list to determine if
   /// animations updates should be disabled
   /// </summary>
-  [NotNull] private static readonly List<Predicate<Player>> DisableAnimationsUpdating = [];
+  private static readonly List<Predicate<Player>> DisableAnimationsUpdating = [];
 
   /// <summary>
   /// Evaluates conditions of <see cref="DisableGraphicsOrPredicates"/>
   /// </summary>
   internal static bool EvaluateDisableGraphics(Player player) =>
-    DisableGraphicsOrPredicates.Any(p => p is not null && p(player));
+    DisableGraphicsOrPredicates.Any(p => p(player));
 
   /// <summary>
   /// Evaluates conditions of <see cref="DisableAnimationsUpdating"/>
   /// </summary>
   internal static bool EvaluateDisableAnimationUpdate(Player player) =>
-    DisableAnimationsUpdating.Any(p => p is not null && p(player));
+    DisableAnimationsUpdating.Any(p => p(player));
 
   /// <summary>
   /// Adds <see cref="Predicate{Player}"/> to list
@@ -57,8 +57,7 @@ public static class GlobalCompatConditions {
   public static void AddAnimationUpdateDisableCondition(Predicate<Player> p) =>
     DisableAnimationsUpdating.Add(p);
 
-  internal static void Unload()
-  {
+  internal static void Unload() {
     DisableGraphicsOrPredicates.Clear();
     DisableAnimationsUpdating.Clear();
   }
