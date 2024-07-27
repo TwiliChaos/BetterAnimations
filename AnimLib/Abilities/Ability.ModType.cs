@@ -8,8 +8,9 @@ public partial class Ability : ModType<Player, Ability> {
     return newInstance;
   }
 
-  protected override void Register() {
+  protected sealed override void Register() {
     AnimLoader.Add(this);
+    ModTypeLookup<Ability>.Register(this);
   }
 
   protected override Player CreateTemplateEntity() => null!;

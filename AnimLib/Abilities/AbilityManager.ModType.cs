@@ -9,7 +9,7 @@ public partial class AbilityManager : ModType<Player, AbilityManager>, IIndexed 
     return newInstance;
   }
 
-  protected override void Register() {
+  protected sealed override void Register() {
     AnimLoader.Add(this);
     ModTypeLookup<AbilityManager>.Register(this);
   }
