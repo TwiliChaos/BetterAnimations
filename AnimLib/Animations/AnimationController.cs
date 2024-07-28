@@ -1,4 +1,4 @@
-using AnimLib.Extensions;
+﻿using AnimLib.Extensions;
 using JetBrains.Annotations;
 
 namespace AnimLib.Animations;
@@ -97,12 +97,13 @@ public abstract partial class AnimationController {
   /// Here is an example of updating the animation based on player movement.
   /// This code assumes your <see cref="MainAnimation"/> have tags named "Running", "Jumping", "Falling", and "Idle".
   /// <code>
-  /// public override void Update() {
+  /// public override AnimationOptions Update() {
   ///   if (Math.Abs(player.velocity.X) &gt; 0.1f) {
   ///     return new AnimationOptions("Running");
   ///   }
   ///   if (player.velocity.Y != 0) {
-  ///     return new AnimationOptions(player.velocity.Y * player.gravDir &lt; 0 ? "Jumping" : "Falling");
+  ///     string tag = player.velocity.Y * player.gravDir &lt; 0 ? "Jumping" : "Falling";
+  ///     return new AnimationOptions(tag);
   ///   }
   ///   return new AnimationOptions("Idle");
   /// }
@@ -230,9 +231,7 @@ public abstract partial class AnimationController {
     int newFrameIndex = FrameIndex;
     while (newFrameTime >= duration) {
       // Determine next frame
-      bool isFirstFrame = newFrameIndex == 0;
-      bool isLastFrame = newFrameIndex == lastFrame;
-      bool endOfFrame = !isPingPong ? isLastFrame : isFirstFrame;
+      bool endOfFrame = newFrameIndex == (isPingPong ? 0 : lastFrame);
       if (endOfFrame) {
         if (loopCount > 0 && TimesLooped >= loopCount) {
           // Do not change frame

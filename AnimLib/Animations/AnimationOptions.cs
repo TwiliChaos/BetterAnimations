@@ -1,4 +1,4 @@
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
 namespace AnimLib.Animations;
 
@@ -20,7 +20,7 @@ namespace AnimLib.Animations;
 /// If degrees are necessary to work with, use <see cref="MathHelper.ToRadians(float)"/> for this parameter.
 /// </param>
 /// <param name="isReversed">
-/// Whether to play the track in reverse,
+/// Whether to play the animation in reverse,
 /// -or- <see langword="null"/>, to use the value defined in the Aseprite file.
 /// </param>
 /// <param name="loopCount">
