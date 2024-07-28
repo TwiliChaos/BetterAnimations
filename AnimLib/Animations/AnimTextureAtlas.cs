@@ -41,7 +41,7 @@ public record AnimTextureAtlas {
   /// <summary>
   /// The <see cref="Texture2D"/> of this Texture Atlas.
   /// </summary>
-  public Texture2D Texture => _texture.Value;
+  public Texture2D GetTexture() => _texture.Value;
 
   /// <summary>
   /// Gets a <see cref="Rectangle"/> at the frame of the provided <paramref name="index"/>.

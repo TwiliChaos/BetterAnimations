@@ -83,7 +83,7 @@ public sealed partial class Animation {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
-    return atlas.Texture;
+    return atlas.GetTexture();
   }
 
 
