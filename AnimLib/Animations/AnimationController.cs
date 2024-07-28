@@ -11,7 +11,7 @@ namespace AnimLib.Animations;
 /// </summary>
 /// <remarks>
 /// Alongside your <see cref="AnimSpriteSheet"/>s, that stores what animations are, such as their positions on spritesheets and duration,
-/// your <see cref="AnimationController"/> determines which track plays depending on whatever conditions you have, and how they are played.
+/// your <see cref="AnimationController"/> determines which tag plays depending on whatever conditions you have, and how they are played.
 /// </remarks>
 [PublicAPI]
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
@@ -24,15 +24,14 @@ public abstract partial class AnimationController {
   // Let's not make that assumption.
 
   /// <summary>
-  /// The <see cref="Animation"/> to retrieve track data from, such as frame duration.
-  /// This <see cref="Animation"/>'s <see cref="AnimSpriteSheet"/> must contain all tracks that can be used.
+  /// The current <see cref="Animation"/> to retrieve tag data from.
   /// <para>By default, this is the first <see cref="Animation"/> in <see cref="Animations"/>.</para>
   /// </summary>
   public Animation? MainAnimation { get; private set; }
 
 
   /// <summary>
-  /// The name of the animation track currently playing. This value cannot be set to a null or whitespace value.
+  /// The name of the animation tag currently playing. This value cannot be set to a null or whitespace value.
   /// </summary>
   /// <exception cref="ArgumentException">A set operation cannot be performed with a null or whitespace value.</exception>
   public string CurrentTagName { get; private set; } = string.Empty;
@@ -81,7 +80,8 @@ public abstract partial class AnimationController {
   /// Allows you to do things after this <see cref="AnimationController"/> is constructed.
   /// Useful for getting references to <see cref="Animation"/>s via <see cref="RegisterAnimation"/>.
   /// </summary>
-  public virtual void Initialize() { }
+  public virtual void Initialize() {
+  }
 
   /// <summary>
   /// Determines whether the animation should update. Return <see langword="false"/> to stop the animation from updating.
@@ -92,12 +92,12 @@ public abstract partial class AnimationController {
   public virtual bool PreUpdate() => AnimationUpdEnabledCompat;
 
   /// <summary>
-  /// This is where you choose what tracks are played, and how they are played.
+  /// This is where you choose what animations are played, and how they are played.
   /// </summary>
   /// <inheritdoc cref="AnimationOptions"/>
   /// <example>
   /// Here is an example of updating the animation based on player movement.
-  /// This code assumes your <see cref="MainAnimation"/> have tracks for "Running", "Jumping", "Falling", and "Idle".
+  /// This code assumes your <see cref="MainAnimation"/> have tags named "Running", "Jumping", "Falling", and "Idle".
   /// <code>
   /// public override void Update() {
   ///   if (Math.Abs(player.velocity.X) &gt; 0.1f) {
@@ -141,13 +141,13 @@ public abstract partial class AnimationController {
   /// This can be useful for things like player transformations that use multiple <see cref="AnimSpriteSheet"/>s.
   /// </summary>
   /// <param name="animation">Animation to set this player's <see cref="MainAnimation"/> to.</param>
-  /// <param name="track">Optional track to set this to.</param>
+  /// <param name="tagName">Name of an optional tag to set this to.</param>
   /// <exception cref="ArgumentNullException"><paramref name="animation"/> is null.</exception>
-  public void SetMainAnimation(Animation animation, string? track) {
+  public void SetMainAnimation(Animation animation, string? tagName) {
     ArgumentNullException.ThrowIfNull(animation);
-    if (track is not null) {
-      if (!animation.SpriteSheet.TagDictionary.ContainsKey(track)) {
-        throw new ArgumentException("Track does not match an Animation Tag in the provided Animation");
+    if (tagName is not null) {
+      if (!animation.SpriteSheet.TagDictionary.ContainsKey(tagName)) {
+        throw new ArgumentException($"Tag \"{tagName}\" does not match an Animation Tag in the provided Animation");
       }
     }
 
@@ -196,7 +196,7 @@ public abstract partial class AnimationController {
     if (AnimPlayer.Local?.DebugEnabled ?? false) {
       // TODO: replace Main.NewText spam with something better?
       // Main.NewText($"Frame called: Tile [{MainAnimation.CurrentFrame}], " +
-      //   $"{TrackName}{(Reversed ? " (Reversed)" : "")} " +
+      //   $"{CurrentTagName}{(Reversed ? " (Reversed)" : "")} " +
       //   $"Time: {FrameTime}, " +
       //   $"AnimIndex: {FrameIndex}/{MainAnimation.CurrentTag.Frames.Length}");
     }

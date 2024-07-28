@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Diagnostics;
+using System.Linq;
 using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
@@ -120,7 +121,7 @@ public static class AnimTextureAtlasProcessor {
       var originalToDuplicateLookup = new Dictionary<int, Rectangle>();
 
       for (int i = 0; i < frames.Length; i++) {
-        var frame = frames[i];
+        FrameEntry frame = frames[i];
 
         // Create region for duplicate frame, don't write to texture
         if (options.MergeDuplicateFrames && duplicateMap!.TryGetValue(i, out int value)) {
@@ -159,7 +160,8 @@ public static class AnimTextureAtlasProcessor {
       }
 
       Texture aseTexture = new(name, imageSize, imagePixels);
-      var texture = AnimLibMod.Instance.AseTextureToTexture2DAsset(aseTexture, name);
+      var texture = AnimLibMod.Instance?.AseTextureToTexture2DAsset(aseTexture, name)
+        ?? throw new UnreachableException($"{nameof(AnimLibMod)} Instance should not be null.");
       AnimTextureAtlas atlas = new(regions, texture);
       atlasData.Add(name, atlas);
     }
@@ -167,12 +169,12 @@ public static class AnimTextureAtlasProcessor {
     return atlasData;
   }
 
-  private static Dictionary<int, int> GetDuplicateMap(FrameEntry[] layerFrames) {
+  private static Dictionary<int, int> GetDuplicateMap(ReadOnlySpan<FrameEntry> layerFrames) {
     int emptyIndex = -1;
     var duplicateMap = new Dictionary<int, int>();
 
     for (int i = 0; i < layerFrames.Length; i++) {
-      var frame = layerFrames[i];
+      FrameEntry frame = layerFrames[i];
       if (frame.IsEmpty) {
         // Frame is empty, map to shared empty and continue to next frame
         if (emptyIndex == -1) {

@@ -23,6 +23,10 @@ public sealed partial class AnimLibMod {
     return base.CreateDefaultContentSource();
   }
 
+  /// <summary>
+  /// Contains all Texture2D Assets that were generated during
+  /// <see cref="AnimLib.Animations.Aseprite.Processors.AnimSpriteSheetProcessor"/>
+  /// </summary>
   public readonly AssetRepository AseAssets = new(GetAssetReaderCollection());
 
   private static AssetReaderCollection GetAssetReaderCollection() => Main.instance.Services.Get<AssetReaderCollection>();

@@ -170,7 +170,7 @@ public abstract partial class Ability {
   /// If <see cref="State"/> is either <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>.
   /// </summary>
   /// <value> <see langword="true"/> if the state is either <see cref="AbilityState.Starting"/>, <see cref="AbilityState.Active"/>, or <see cref="AbilityState.Ending"/>, otherwise <see langword="false"/>. </value>
-  public bool InUse => Starting || Active || Ending;
+  public bool InUse => State is AbilityState.Starting or AbilityState.Active or AbilityState.Ending;
 
   #endregion
 
@@ -261,7 +261,8 @@ public abstract partial class Ability {
   }
 
   /// <summary>
-  /// Called during <see cref="ModPlayer.Initialize"> ModPlayer.Initialize() </see>, after <see cref="AbilityManager.Initialize"> AbilityManager.Initialize() </see>
+  /// Called during <see cref="ModPlayer.Initialize"> ModPlayer.Initialize() </see>,
+  /// after <see cref="AbilityManager.Initialize"> AbilityManager.Initialize() </see>
   /// Abilities are initialized in order of their <see cref="Ability.Id"/>, from lowest to highest.
   /// </summary>
   public virtual void Initialize() {
@@ -419,7 +420,7 @@ public abstract partial class Ability {
   /// <returns>String with ID, name, level and max level, current time, and cooldown if applicable.</returns>
   public override string ToString() =>
     $"ID:{Id} Name:{Name} " +
-    $"(Level {Level}{(this is ILevelable levelable ? $"/{levelable.MaxLevel}" : string.Empty)}) " +
+    $"(Level {Level}/{(this as ILevelable)?.MaxLevel ?? Level}" +
     $"Player:{Player.whoAmI} State:{State} " +
     $"Time:{StateTime} " +
     (Cooldown != 0 ? $" Cooldown:{CooldownLeft}/{Cooldown}" : string.Empty);
@@ -435,15 +436,11 @@ public abstract partial class Ability {
 
 // ReSharper disable once InconsistentNaming
 // This class exists bc ReSharper will complain about solution not having any ILevelable abilities
-internal class __LevelableAbility : Ability, ILevelable {
-  private int _level;
+internal sealed class __LevelableAbility : Ability, ILevelable {
   public override int Id => -1;
-  public override int Level => _level;
+  public override int Level => ((ILevelable)this).Level;
 
-  int ILevelable.Level {
-    get => _level;
-    set => _level = value;
-  }
+  int ILevelable.Level { get; set; }
 
   public int MaxLevel => 0;
 

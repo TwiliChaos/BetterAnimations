@@ -3,14 +3,10 @@ using Terraria.ID;
 
 namespace AnimLib.Animations;
 
-public partial class AnimationController : ModType<Player, AnimationController>, IIndexed {
-  public override AnimationController NewInstance(Player entity) {
-    AnimationController newInstance = base.NewInstance(entity);
-    newInstance.Index = Index;
-    newInstance.Initialize();
-    return newInstance;
-  }
-
+public partial class AnimationController : ModType<Player, AnimationController> {
+  /// <summary>
+  /// Returns <see langword="false"/> if this is running on a Server.
+  /// </summary>
   public override bool IsLoadingEnabled(Mod mod) {
     return Main.netMode != NetmodeID.Server;
   }
@@ -21,6 +17,4 @@ public partial class AnimationController : ModType<Player, AnimationController>,
   }
 
   protected override Player CreateTemplateEntity() => null!;
-
-  public ushort Index { get; internal set; }
 }

@@ -1,4 +1,4 @@
-﻿using AsepriteDotNet.Aseprite;
+using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Processors;
 
@@ -15,7 +15,7 @@ public static class AnimSpriteSheetProcessor {
   /// <param name="options">Optional <see cref="ProcessorOptions"/> used in processing the <see cref="AsepriteFile"/>.</param>
   /// <returns></returns>
   /// <exception cref="InvalidOperationException"></exception>
-  public static AnimSpriteSheet Process(AsepriteFile file, [CanBeNull] ProcessorOptions options = null) {
+  public static AnimSpriteSheet Process(AsepriteFile file, ProcessorOptions? options = null) {
     ArgumentNullException.ThrowIfNull(file, nameof(file));
     options ??= ProcessorOptions.Default;
 

@@ -10,7 +10,7 @@ public abstract class AnimCompatSystem : ModSystem {
 
   /// <summary>
   /// Set this flag to true, if system activation
-  /// succeed and predicates were registered
+  /// failed and predicates were not registered
   /// </summary>
   protected bool Fault;
 
@@ -34,12 +34,10 @@ public abstract class AnimCompatSystem : ModSystem {
   /// blacklisted in AnimPlayer's character controllers
   /// </summary>
   public bool IsBlockListed(AnimPlayer player) {
-    AnimCharacter character = player.Characters.ActiveCharacter;
-    return character != null && (
-      character.AbilityManager != null &&
-      character.AbilityManager.AnimCompatSystemBlocklist.Contains(Name) ||
-      character.AnimationController != null &&
-      character.AnimationController.AnimCompatSystemBlocklist.Contains(Name)
+    AnimCharacter? character = player.Characters.ActiveCharacter;
+    return character is not null && (
+      (character.AbilityManager?.AnimCompatSystemBlocklist.Contains(Name) ?? false) ||
+      (character.AnimationController?.AnimCompatSystemBlocklist.Contains(Name) ?? false)
     );
   }
 

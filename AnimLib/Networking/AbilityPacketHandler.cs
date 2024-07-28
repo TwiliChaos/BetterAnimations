@@ -50,7 +50,7 @@ internal class AbilityPacketHandler : PacketHandler {
     ModPacket packet = GetPacket(fromWho);
     AnimPlayer fromPlayer = Main.player[fromWho].GetModPlayer<AnimPlayer>();
 
-    var modsToUpdate = (from pair in fromPlayer.Characters.Dict
+    var modsToUpdate = (from pair in fromPlayer.Characters.ModCharacterMap
       where pair.Value.AbilityManager?.NetUpdate ?? false
       select pair).ToList();
 

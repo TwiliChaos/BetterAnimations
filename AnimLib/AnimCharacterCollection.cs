@@ -6,30 +6,30 @@ internal class AnimCharacterCollection : IReadOnlyDictionary<Mod, AnimCharacter>
   private readonly CharStack _characterStack = new();
   private AnimCharacter.Priority _activePriority;
 
-  internal readonly Dictionary<Mod, AnimCharacter> Dict = [];
+  internal readonly Dictionary<Mod, AnimCharacter> ModCharacterMap = [];
   public AnimCharacter? ActiveCharacter { get; private set; }
 
   public bool ContainsKey(Mod key) {
     ArgumentNullException.ThrowIfNull(key);
-    return Dict.ContainsKey(key);
+    return ModCharacterMap.ContainsKey(key);
   }
 
   public bool TryGetValue(Mod key, [NotNullWhen(true)] out AnimCharacter? value) {
     ArgumentNullException.ThrowIfNull(key);
-    return Dict.TryGetValue(key, out value);
+    return ModCharacterMap.TryGetValue(key, out value);
   }
 
-  public AnimCharacter this[Mod mod] => Dict[mod];
+  public AnimCharacter this[Mod mod] => ModCharacterMap[mod];
 
-  public IEnumerable<Mod> Keys => Dict.Keys;
-  public IEnumerable<AnimCharacter> Values => Dict.Values;
+  public IEnumerable<Mod> Keys => ModCharacterMap.Keys;
+  public IEnumerable<AnimCharacter> Values => ModCharacterMap.Values;
 
 
-  public IEnumerator<KeyValuePair<Mod, AnimCharacter>> GetEnumerator() => Dict.GetEnumerator();
+  public IEnumerator<KeyValuePair<Mod, AnimCharacter>> GetEnumerator() => ModCharacterMap.GetEnumerator();
 
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-  public int Count => Dict.Count;
+  public int Count => ModCharacterMap.Count;
 
   public bool CanEnable(AnimCharacter.Priority priority = AnimCharacter.Priority.Default) {
     if (ActiveCharacter == null) return true;
