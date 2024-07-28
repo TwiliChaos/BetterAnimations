@@ -29,12 +29,10 @@ public abstract partial class AnimationController {
   /// </summary>
   public Animation? MainAnimation { get; private set; }
 
-
   /// <summary>
-  /// The name of the animation tag currently playing. This value cannot be set to a null or whitespace value.
+  /// The name of the animation tag currently playing.
   /// </summary>
-  /// <exception cref="ArgumentException">A set operation cannot be performed with a null or whitespace value.</exception>
-  public string CurrentTagName { get; private set; } = string.Empty;
+  public string CurrentTagName => MainAnimation?.CurrentTag.Name ?? string.Empty;
 
   /// <summary>
   /// Current index of the <see cref="AnimTag"/> being played.
@@ -164,7 +162,7 @@ public abstract partial class AnimationController {
     Animation anim = MainAnimation;
 
     if (!anim.TryGetTag(options.TagName, out AnimTag? tag)) {
-      string message = $"\"{options.TagName}\" is not a valid key for the main Animation track.";
+      string message = $"\"{options.TagName}\" is not a valid key for the main Animation tag.";
       throw new ArgumentException(message, nameof(options));
     }
 
@@ -259,11 +257,17 @@ public abstract partial class AnimationController {
     FrameTime = newFrameTime;
   }
 
-  internal void SetTag(string newTrack, bool? isReversed = null) {
-    CurrentTagName = newTrack;
-    AnimTag track = MainAnimation!.SpriteSheet.TagDictionary[newTrack];
+  internal void SetTag(string newTagName, bool? isReversed = null) {
+    int index = MainAnimation!.IndexOfTag(newTagName);
+    if (index == -1) {
+      throw new ArgumentException($"\"{newTagName}\" does not match any {nameof(AnimTag)} name");
+    }
+
+    MainAnimation.CurrentTagIndex = index;
+
+    AnimTag tag = MainAnimation!.CurrentTag;
     FrameTime = 0;
-    Reversed = isReversed ?? track.IsReversed;
-    FrameIndex = Reversed ? track.Frames.Length - 1 : 0;
+    Reversed = isReversed ?? tag.IsReversed;
+    FrameIndex = Reversed ? tag.Frames.Length - 1 : 0;
   }
 }

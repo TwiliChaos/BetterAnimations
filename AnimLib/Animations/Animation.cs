@@ -42,15 +42,15 @@ public sealed partial class Animation {
     SpriteSheet = spriteSheet;
   }
 
+  /// <summary>
+  /// The index of the animation tag currently playing.
+  /// </summary>
+  public int CurrentTagIndex { get; internal set; }
 
   /// <summary>
   /// Current <see cref="AnimTag"/> that is being played.
-  /// <para>
-  /// If <see cref="AnimationController.CurrentTagName"/> is not a valid track name, this returns the first <see cref="AnimTag"/> in the
-  /// <see cref="AnimSpriteSheet"/>.
-  /// </para>
   /// </summary>
-  public AnimTag CurrentTag => SpriteSheet.TagDictionary[Controller.CurrentTagName];
+  public AnimTag CurrentTag => SpriteSheet.Tags[CurrentTagIndex];
 
   /// <summary>
   /// Current <see cref="AnimFrame"/> that is being played.
@@ -138,5 +138,23 @@ public sealed partial class Animation {
   public bool TryGetTag(string tagName, [NotNullWhen(true)] out AnimTag? tag) {
     ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
     return SpriteSheet.TagDictionary.TryGetValue(tagName, out tag);
+  }
+
+  /// <summary>
+  /// Returns the index of the <see cref="AnimTag"/> with the specified name,
+  /// -or- -1 if no such <see cref="AnimTag"/> exists.
+  /// </summary>
+  /// <param name="tagName"></param>
+  /// <returns></returns>
+  public int IndexOfTag(string tagName) {
+    var tags = SpriteSheet.Tags;
+
+    for (int i = 0; i < tags.Length; i++) {
+      if (tags[i].Name == tagName) {
+        return i;
+      }
+    }
+
+    return -1;
   }
 }
