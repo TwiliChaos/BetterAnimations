@@ -43,12 +43,12 @@ public static class AnimTextureAtlasProcessor {
   private static LayerEntry[] GetAllFrames(AsepriteFile file, ProcessorOptions options) {
     // We want to know what all the valid root layers are
     // These are layers that do not have a parent, and any children will be flattened into them
-    var rootLayers = GetRootLayers(file, options);
+    var rootLayers = GetRootLayers(file, options, out string[] names);
 
     int frameCount = file.Frames.Length;
     var allFrames = new LayerEntry[rootLayers.Length];
     for (int i = 0; i < rootLayers.Length; i++) {
-      allFrames[i] = new LayerEntry(rootLayers[i].Name, new FrameEntry[frameCount]);
+      allFrames[i] = new LayerEntry(names[i], new FrameEntry[frameCount]);
     }
 
     for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -63,18 +63,74 @@ public static class AnimTextureAtlasProcessor {
     return allFrames;
   }
 
-  private static AsepriteLayer[] GetRootLayers(AsepriteFile file, ProcessorOptions options) {
+  private static AsepriteLayer[] GetRootLayers(AsepriteFile file, ProcessorOptions options, out string[] names) {
     var rootLayers = new List<AsepriteLayer>(file.Layers.Length);
+    var namesList = new List<string>(rootLayers.Capacity);
 
-    foreach (AsepriteLayer layer in file.Layers) {
+    for (int i = 0; i < file.Layers.Length; i++) {
+      AsepriteLayer layer = file.Layers[i];
+      AsepriteUserData userData = layer.UserData;
+      if (userData.HasColor && userData.Color == UserDataColors.Red) {
+        // Ignore any layer that has Red userdata, regardless of any other settings
+        // Some layers we may want to treat as a reference rather than an art asset
+        if (layer is AsepriteGroupLayer gl) {
+          // Ignore all children of Red userdata group layer
+          i += gl.Children.Length;
+        }
+
+        continue;
+      }
+
+      if (layer is AsepriteGroupLayer groupLayer) {
+        var children = groupLayer.Children;
+        if (children.Length == 0) {
+          // Ignore empty group layer
+          continue;
+        }
+
+        bool isValid = false;
+        foreach (AsepriteLayer childLayer in children) {
+          if (!childLayer.IsVisible && options.OnlyVisibleLayers) {
+            continue;
+          }
+
+          // Ignore layer if all are of specific UserData colors
+          AsepriteUserData childUserData = childLayer.UserData;
+          if (childUserData.HasColor &&
+              childUserData.Color == UserDataColors.Red ||
+              childUserData.Color == UserDataColors.Green) {
+            continue;
+          }
+
+          isValid = true;
+          break;
+        }
+
+        if (isValid) {
+          rootLayers.Add(layer);
+          namesList.Add(ProcessorHelper.GetNestedLayerName(file.Layers, i));
+        }
+
+        continue;
+      }
+
+      if (userData.HasColor && userData.Color == UserDataColors.Green) {
+        // Consider any layer that has Green userdata as a root layer, regardless of any other settings
+        // Some layers we want imported but not visible while working on them in Aseprite
+        rootLayers.Add(layer);
+        namesList.Add(ProcessorHelper.GetNestedLayerName(file.Layers, i));
+        continue;
+      }
+
       if (layer.ChildLevel == 0 &&
-          layer is not AsepriteGroupLayer { Children.Length: 0 } &&
           (layer.IsVisible || !options.OnlyVisibleLayers) &&
           (!layer.IsBackgroundLayer || options.IncludeBackgroundLayer)) {
         rootLayers.Add(layer);
+        namesList.Add(layer.Name);
       }
     }
 
+    names = namesList.ToArray();
     return rootLayers.ToArray();
   }
 

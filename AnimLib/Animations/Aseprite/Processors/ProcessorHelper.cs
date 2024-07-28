@@ -66,6 +66,15 @@ public static class ProcessorHelper {
     // If only we could use Union here...
     for (int i = 0; i < celsLength; i++) {
       AsepriteCel cel = frame.Cels[i];
+      if (cel.Layer.UserData.HasColor) {
+        var color = cel.Layer.UserData.Color;
+        // Ignore Red: not to be imported at all
+        // Ignore Green: imported as its own root layer
+        if (color == UserDataColors.Red || color == UserDataColors.Green) {
+          continue;
+        }
+      }
+
       for (int j = jStart; j < childrenLength; j++) {
         AsepriteLayer child = groupLayer.Children[j];
         if (ReferenceEquals(child, cel.Layer)) {
@@ -113,5 +122,31 @@ public static class ProcessorHelper {
 
   private static void BlendTilemapCel(AsepriteFrame frame, Rgba32[] flattenedLayerPixels, AsepriteTilemapCel tilemapCel) {
     AsepriteFrameExtensions.BlendTilemapCel(flattenedLayerPixels, tilemapCel, frame.Size.Width);
+  }
+
+  public static string GetNestedLayerName(ReadOnlySpan<AsepriteLayer> fileLayers, int index) {
+    AsepriteLayer targetLayer = fileLayers[index];
+    if (targetLayer.ChildLevel == 0) {
+      return targetLayer.Name;
+    }
+
+    string[] namesToMerge = new string[targetLayer.ChildLevel + 1];
+    namesToMerge[targetLayer.ChildLevel] = targetLayer.Name;
+
+    int parentLevel = targetLayer.ChildLevel - 1;
+    for (int i = index; i >= 0; i--) {
+      AsepriteLayer layer = fileLayers[i];
+      if (layer.ChildLevel != parentLevel) {
+        continue;
+      }
+
+      parentLevel = layer.ChildLevel - 1;
+      namesToMerge[layer.ChildLevel] = layer.Name;
+      if (layer.ChildLevel == 0) {
+        break;
+      }
+    }
+
+    return string.Join('/', namesToMerge);
   }
 }
