@@ -60,6 +60,8 @@ Requesting an Aseprite file is similar to requesting a Texture2D:
 var mySpriteSheet = ModContent.Request<AnimSpriteSheet>("MyMod/Path/To/MyAsepriteFile");
 ```
 
+---
+
 ### [AnimationController](AnimLib/Animations/AnimationController.cs)
 
 `AnimationController` is the controller for all animations. This inherits from ModType, and are loaded automatically,similarly to ModPlayers.
