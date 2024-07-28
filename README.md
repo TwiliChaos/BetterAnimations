@@ -1,138 +1,214 @@
 # AnimLib
 
-### Terraria mod library to allow for an easier creation of animations
+### Terraria library mod to allow for an easier creation of complex animations
 
-AnimLib is a mod library, meant to be utilized by other mods. This does nothing on its own, but is a framework for other mods to create animations. The purpose of this mod is for other mods to easily create more complicated animations for sprites of their players.
+AnimLib is a library mod, which serves as a framework for other mods to create complex animations.
 
 ## For Modders
 
-There are two components required for your mod to use this animation framework: [AnimationSource](AnimLibMod/Animations/AnimationSource.cs) and [AnimationController](AnimLibMod/Animation/AnimationController.cs). You will also have to actually draw your sprites using tML's PlayerLayers.
+This mod supports animating with the use of Aseprite files. This also supports Abilities, such as what OriMod uses.
 
 ---
 
-### [AnimationSource](AnimLobMod/Animations/AnimationSource.cs)
+## Animations
 
-`AnimationSource` is the database for your animations, such as tracks. Your `AnimationSources` are constructed by `AnimLibMod` during startup (`Mod.Load()`), and a single instance of it will exist at any given time. You can have multiple classes derived from `AnimationSource`.
-
-`AnimationSources` consist of 2 abstract properties: `spriteSize` and `tracks`
-- `spriteSize` is simply the size of all sprites. In a spritesheet, all sprites are expected to be the same size.
-- `tracks` stores all animation tracks that you can use. These determine which sprite to use, as well as how long a frame plays for. For more information, read further below in the **Tracks** section.
-
-The spritesheet texture is assigned in `AnimationSource.Load(ref string texturePath)`, similarly to how tML's ModItems and other Mod classes determine their texture. Although this assigns the main spritesheet texture, you are able to have your Tracks use a different spritesheet instead, if necessary.
-
-There is one "main" animation at a given time, that is, how long frames are and how long the track is for the `AnimationController` depends on which `Animation` is the main animation. This is accessed through `AnimationSource.MainAnimation`, and changed through `AnimationSource.SetMainAnimation()`
-
-If you wish to access your AnimationSource instance, you can get it with `AnimLibMod.GetAnimationSource<MyAnimationSource>()`;
-- AnimLib creates these during `Mod.PostSetupContent()`, so this method cannot be used during this time.
-
-For an example of an AnimationSource, see [OriMod's implementation](https://github.com/TwiliChaos/OriMod/blob/e5a0eabbe973fd24995ef6740ea3f7ebfcd04651/Animations/OriAnimationSources.cs)
+All animations that are handled by this mod are to be stored in
+[**Aseprite**](https://github.com/aseprite/aseprite) files.
+The Aseprite file is imported and processed into an AnimSpriteSheet asset, accessed with `ModContent.Request`.
+The animation logic is handled inside an [AnimationController](AnimLib/Animations/AnimationController.cs).
+The sprites are drawn using tModLoader's PlayerDrawLayers.
 
 ---
 
-### [AnimationController](AnimLibMod/Animations/AnimationController.cs)
+### [AnimSpriteSheet](AnimLib/Animations/AnimSpriteSheet.cs)
 
-`AnimationController` is the controller for all animations, and stores current animation data for the player. This also controls how animations are played. Your `AnimationControllers` types are collected by `AnimLibMod` and are constructed during player initialization. There exists one instance per player. You can only have one class derived from `AnimationController`.
+[`AnimSpriteSheet`](AnimLib/Animations/AnimSpriteSheet.cs) is a readonly class that your Aseprite file (\*.aseprite|\*.ase) will be parsed to.
+This class contains `AnimTag`s and `AnimTextureAtlas`es.
+The `AnimTags` may be indexed by Animation Tag name.
+The `AnimTextureAtlases` are indexed by layer name.
 
-`AnimationController` has one abstract member, and that is `Update()`
-- `Update()` is where you will put the logic for choosing what track is played. In here you will make one call per `Update()` loop to the method `PlayTrack()`. For this you will specify the track to play. If the track is the same as it was previously, the track plays normally.
-- Example code for `Update()` can be found in the Xmldoc for [AnimationController.Update()](AnimLibMod/Animations/AnimationController.cs).
+- [`AnimTags`](AnimLib/Animations/AnimTag.cs) represent [Aseprite's Animation Tags](https://www.aseprite.org/docs/tags/)
+In the Aseprite file, these are how you define individual animations,
+and they contain information for each frame, such as the frame's sprite sheet index, and frame durations.
 
-For an example of an AnimationController, see [OriMod's implementation](https://github.com/TwiliChaos/OriMod/blob/e5a0eabbe973fd24995ef6740ea3f7ebfcd04651/Animations/OriAnimationController.cs#L1).
+- [`AnimTextureAtlases`](AnimLib/Animations/AnimTextureAtlas.cs) contain a reference to a Texture2D asset,
+and an array of `Rectangles.`
+  - The Texture2D is a spritesheet generated from the animation. Any duplicate or empty frames are merged together.
+    - Generally you don't need to know what your spritesheet looks like.
+  - Each `Rectangle` is a SourceRect that can be used in a DrawData. The index of the Rectangle corresponds to a frame of animation.
+    - Duplicate frames or empty frames will have the same Rectangle values.
+
+The generation of these assets are handled by AnimLib.
+
+**Notes:**
+- AnimLib supports automatically upscaling your sprite, so you can work in 1x1 pixels and the mod will upscale them
+to Terraria's 2x2 pixels. To allow automatic upscaling, include the string "upscale" in your Sprite UserData.
+  - This method of enabling the feature may be reworked in the future.
+- AnimLib can generate multiple spritesheets from the same Aseprite file.
+  - Each root layer is treated as a separate sprite to process to a spritesheet. 
+  - Each group layer will have all children merged into it. 
+  - All layers with a UserData color of <font color="6acd5b">Green</font> will always be imported as a root layer, even if it is hidden.
+    - If they are a child, they won't be merged into their parent. 
+  - All layers with a UserData color of <font color="fe5b59">Red</font> will be ignored during import, even if it is visible. 
+    - If they are a group layer, all children will also be ignored.
+  - The path for each imported layer is "Path/To/LayerName".
+    - Usually the path is just the layer name. A Green UserData layer that was a child will have a path.
+
+Requesting an Aseprite file is similar to requesting a Texture2D:
+
+```csharp
+var mySpriteSheet = ModContent.Request<AnimSpriteSheet>("MyMod/Path/To/MyAsepriteFile");
+```
+
+### [AnimationController](AnimLib/Animations/AnimationController.cs)
+
+`AnimationController` is the controller for all animations. This inherits from ModType, and are loaded automatically,similarly to ModPlayers.
+
+This class controls how animations are played, and stores current animation data for the player.
+
+There exists up to one `AnimationController` instance per player per mod.
+You can only have one class derived from `AnimationController` at this time.
+
+- `Initialize()` is where you will register `Animations` (see below)
+
+- `Update()` is where you will put the logic for choosing what track is played.
+In here you will return an `AnimationOptions`. If the name is the same as it was previously, the tag plays normally.
+
+For a working example of an AnimationController,
+see [OriMod's implementation](https://github.com/Ilemni/OriMod/blob/8e4e61bdd2ef6ede944c58a6c8426bf0445cf9c0/Animations/OriAnimationController.cs).
+
+Sample AnimationController:
+
+```csharp
+internal sealed class MyAnimationController : AnimationController {
+    public Animation PlayerAnim { get; private set; }
+    
+    public override void Initialize() {
+        const string asepriteFilePath = "MyMod/Path/To/AsepriteFile";
+        AnimSpriteSheet spriteSheet = ModContent.Request<AnimSpriteSheet>(asepriteFilePath, AssetRequestMode.ImmediateLoad).Value;
+        
+        PlayerAnim = RegisterAnimation(spriteSheet);
+    }
+    
+    public override AnimationOptions Update() {
+        if (Math.Abs(player.velocity.X) > 0.1f) {
+            float playerSpeed = Math.Abs(Player.velocity.X);
+            return new AnimationOptions("Running", speed: playerSpeed * 0.5f);
+        }
+        if (player.velocity.Y != 0) {
+            string tag = player.velocity.Y * player.gravDir > 0 ? "Jumping" : "Falling";
+            return new AnimationOptions(tag);
+        }
+        return new AnimationOptions("Idle");
+    }
+}
+```
 
 ---
 
-### [Animation](AnimLibMod/Animations/Animation.cs)
+### [Animation](AnimLib/Animations/Animation.cs)
 
-`Animation` is the glue between your `AnimationController` and `AnimationSources`. In each `AnimationController` there is one `Animation` per any `AnimationSource` you have. These are created automatically for your `AnimationController`.
+`Animation` is the glue between your `AnimationController` and `AnimSpriteSheet`.
+These are created in your`AnimationController` when you register them.
 
 `Animation` has various properties that you may use, that represent the current Animation.
-- `CurrentTrack` is the `Track` in the `AnimationSource` that your `AnimationController` is currently playing.
-    - If the `AnimationController` is not playing a track that is in `AnimationSource`, this will return the first track.
-- `CurrentFrame` is the `Frame` in the `CurrentTrack` that your `AnimationController` is currently playing.
-    - If the `AnimationController`'s current frame index is out of bounds for this `AnimationSource`, this will return either the first or last frame based on the index.
-- `CurrentTile` represents a `Rectangle` of the `CurrentFrame`, and map to your spritesheet. Values are in pixels.
-- `CurrentTexture` is the `Texture2D` in the `AnimationSource` that should be drawn.
-    - For the most part this is the one in `AnimationSource`, but changes if `CurrentTrack` has a different texture to play instead.
-
-`Animation` also contains some helpful methods.
-- `GetDrawData(PlayerDrawInfo)`: This gets you a `DrawData` with a bunch of stuff already set up for you. Feel free to change the values in the returned `DrawData` if you need to, such as color.
-- `TryAddToLayers(...)`: This simply checks if the current track playing in `AnimationController` is also a track in `AnimationSource`, before adding or inserting the layer into the list.
-
----
-
-### Creating a [Track](AnimLibMod/Animations/Track.cs)
-
-`Track` construction should happen in `AnimationSource`. `Tracks` contains an array of [Frames](AnimLibMod/Animations/Frame.cs) that determine which sprite is drawn, for how long, and even which spritesheet texture is used. A Track is constructed using an array of `Frame`s, and optionally a `LoopMode` and `Direction`.
-- [LoopMode](AnimLibMod/Animations/LoopMode.cs) is what your `AnimationController` will do when it reaches the last frame. The animation will either stay on that frame indefinitely (`LoopMode.None`), or go back to the start (`LoopMode.Always`). By default, this is `Always`.
-- [Direction](AnimLibMod/Animations/Direction.cs) is the direction that your `AnimationController` will play the animation. The track can play forward (`Direction.Forward`), backwards (`Direction.Reverse`), or alternate between the two (`Direction.PingPong`). To use `PingPong`, `LoopMode.Always` must also be used.
-
-`Track` construction can take either a `Frame[]` or `IFrame[]`. There's two important differences here.
-- A `Frame[]` is simply used as is. This track is intended to use up to one texture.
-- An `IFrame[]` should only be used if you will include `SwitchTextureFrame`s. These are `IFrames` specifically designed to allow switching spritesheets during a `Track`. The texture is added to the `Track`, and the `SwitchTextureFrame` is converted to a regular `Frame`. This should only be used if your `Track` will switch textures mid-track.
-
-[Frames](AnimLibMod/Animations/Frame.cs) represent one frame on the spritesheet. This contains the X and Y position of the frame (in sprite-space), as well as the duration. The duration is optional, and the default value is 0, where the track does not advance.
-
-Frame construction can be shorthanded during Track construction. This uses a method in `AnimationSource` meant for shorthanding. Instead of using a bunch of
-- `new Frame(0, 0, 10), new Frame(0, 1, 10), ...`
-
-You can use a shorthand method `F(x, y, duration)`. So a Track creation can look like
-- `F(0, 0, 10), F(0, 1, 10), ...`
-
-If a Track is using a range of frames in a line, and they all play for the same duration, this can be even shorter. Let's say an animation consists of 10 frames. Instead of using
-- `new Track(new[] {F(0, 0, 10), F(0, 1, 10), F(0, 2, 10), ... F(0, 9, 10)})`
-
-You can use the method `Track.Range()`. So a Track creation can look like
-- `Track.Range(F(0, 0, 10), F(0, 9, 10))`
-
-If a `Track` consists of only one `Frame`, use `Track.Single(Frame)`
+- `CurrentTag` is the `AnimTag` in the `AnimSpriteSheet` that your `AnimationController` is currently playing.
+- `CurrentFrame` is the `AnimFrame` in the `CurrentTag` that your `AnimationController` is currently playing.
+- `GetRect(string)` returns a `Rectangle` at `CurrentFrame` for the spritesheet with the provided layer name. 
+  This may be used directly as a SourceRect.
+- `GetTexture(string)` returns the `Texture2D` of the spritesheet that should be drawn.
+- `GetDrawData(PlayerDrawInfo, layer)` returns a new `DrawData` with a bunch of stuff already set up for you, 
+  such as the Texture and SourceRect.
+  - Feel free to change the values in the returned `DrawData` if you need to, such as color.
 
 ---
 
 ### Drawing the Animation
 
-Although animation stuff is handled (mostly) automatically, you still need to use `ModifyDrawLayers` to render the animation yourself. This is because you may have specific requirements to draw the player, such as disabling the vanilla sprite's body. If you're familiar with `PlayerLayers` and `ModPlayer.ModifyDrawLayers()`, great. If not, either Google, ask in the tML Discord server, or try to make sense of [OriMod's implementation](https://github.com/TwiliChaos/OriMod/blob/ddae89ac101a33067ceb218e3463a9b4a198e77e/OriLayers.cs#L18).
+Although animation stuff is handled (mostly) automatically, you still need to use `PlayerDrawLayers` to render the
+animation yourself. This is because you may have specific requirements to draw the player,
+such as disabling the vanilla sprite's body.
+If you're familiar with `PlayerDrawLayers`, great.
+If not, either Google, ask in the tML Discord server, or try to make sense of
+[OriMod's implementation](https://github.com/Ilemni/OriMod/blob/8e4e61bdd2ef6ede944c58a6c8426bf0445cf9c0/OriLayers.cs).
 
-The simplest way to get a `DrawData` to draw is from `AnimLibMod.GetDrawData`.
+Sample PlayerDrawLayer:
 
-    internal readonly PlayerLayer MyPlayerLayer = new PlayerLayer("MyMod", "MyPlayerLayer", delegate (PlayerDrawInfo drawInfo) {
-      DrawData data = AnimLibMod.GetDrawData<MyAnimationController, MyAnimationSource>(drawInfo);
-      
-      Main.playerDrawData.Add(data);
-    };
+```csharp
+internal sealed class MyPlayerLayer : PlayerDrawLayer {
+    protected override void Draw(ref PlayerDrawSet drawInfo) {
+        // Make sure it's your own mod's ModPlayer
+        MyModPlayer myModPlayer = drawInfo.drawPlayer.GetModPlayer<MyModPlayer>();
+        
+        // AnimCharacter contains both your AnimationController and AbilityManager
+        AnimCharacter animCharacter = myModPlayer.GetAnimCharacter(); // Extension method
+        
+        // The animation currently in use
+        Animation animation = animCharacter.AnimationController.MainAnimation;
+        
+        // Most of the DrawData is already set up, but some tweaks may be desirable
+        DrawData data = animation.GetDrawData(drawInfo, "MyAsepriteLayer"); // The layer name as in the Aseprite file
+        
+        // Make any tweaks to your DrawData here, e.g. color, in-world offset, shaders
+        
+        drawInfo.drawCache.Add(data);
+    }
+    // Other methods
+};
+```
 
-A more performant way would be to cache your AnimationController in your ModPlayer, and cache your Animation in your AnimationController during its initialization. So your DrawData code would look something like this
+A more performant way could be to cache your AnimationController in your ModPlayer.
+So your DrawData code may instead look something like this:
 
+```csharp
     MyModPlayer modPlayer = drawInfo.drawPlayer.GetModPlayer<MyModPlayer>();
-    DrawData data = modPlayer.myAnimationController.myAnimation.GetDrawData(drawInfo);
+    DrawData data = modPlayer.myAnimationController.MainAnimation.GetDrawData(drawInfo);
+```
+
+---
+
+## Abilities
+
+AnimLib supports Abilities, actions that your player can take, which are unrelated to items.
+These can be as simple as crouching, or other visual actions meant for animating,
+or as complex as [OriMod](https://steamcommunity.com/sharedfiles/filedetails/?id=2879483545)'s abilities.
+
+[TODO: Fill in this section]: #
+
+---
+
+## Compatibility
+
+This mod seeks to be compatible with other mods which transform the player in different ways.
+The mod will automatically disable animations and abilities if a supported mod's player transformation is active.
+At this time, compatibility is limited to [a few mods](AnimLib/Compat/DefaultTweaks).
 
 ---
 
 ## Q/A
 
+### **Q:** I don't have Aseprite. Can I use another program?
+
+**A:** AnimLib only supports Aseprite files. Purchase Aseprite, or search how to compile it yourself.
+
 ### **Q:** Can this support multiple mods at once?
 
-**A:** AnimLib was designed for multiple mods to take use of it, however, multi-mod functionality is currently untested. It should work, it might not.
+**A:** AnimLib was designed for multiple mods to take use of it, however, multi-mod functionality is currently untested.
+It should work, it might not.
 
 ### **Q:** Can this be used for NPCs, such as bosses?
 
 **A:** Currently, no.
 
-### **Q:** I want to use more than one spritesheet for my animation
+### **Q:** I want to use more than one spritesheet for my animation.
 
-**A:** There are a few approaches to this
-
-- If you can fit all of your sprites for the `AnimationSource` on a single 2048x2048 or smaller image instead, do that instead.
-
-- If a track can fit on its own 2048x2048 or smaller texture, put that track's sprites on one image and use `new Track(...).WithTexture("MyMod/Animations/MyOtherTexture")
-
-- If a track cannot fit in a 2048x2048 texture, use the Track constructor that takes an `IFrame[]`, and use `new SwitchTextureFrame()`, or the shorthand method `F(texturePath, x, y, duration)`
+**A:** Each spritesheet may exist on one layer in the Aseprite file.
 
 ### **Q:** I want to use this mod. My mod uses multiple transformations, but you only allow one `AnimationController`.
 
-Use `AnimationController.SetMainAnimation` to change your animation to a different `AnimationSource`.
+Use `AnimationController.SetMainAnimation` to change your animation to a different `AnimSpriteSheet`.
 
-### **Q:** Why are Frame values in bytes, and the duration as ushort?
+### **Q:** I want my player's arm to rotate when the player is using an item.
 
-Memory usage was an important consideration for this mod. By nature of being a mod that may have to co-exist with hundreds of others, the less memory used, the better. With Frames like this, a single Frame only takes 4 bytes, so a hundred frames takes 400 bytes, rather than 1200 from using all ints. Additionally, there is no need to store values larger than what is used.
-- Frame position is in sprite-space. If a spriteSize in an `AnimationSource` is 128x128, a frame of, say, \[1,4\] is positioned at 128,512. Coupled with how the max texture size is 2048x2048, this is only an issue if sprites are 8 pixels or smaller, *and* there needs to be more tha 65535 sprites for that 8 pixel character. In that case a second spritesheet could be used.
-- Frame duration is in frames (the time...), so the max value would be, at worst, 18 minutes. If a frame needs to be longer than 18 minutes (dear god why), `PlayTrack()` duration override accepts an int value.
+Currently not supported. A workaround may be to have the arm(s) be on separate layers, and use a different animation
+for that arm layer when an item is being used.
