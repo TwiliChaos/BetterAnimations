@@ -5,7 +5,8 @@ namespace AnimLib.Animations;
 
 public partial class AnimationController : ModType<Player, AnimationController> {
   /// <summary>
-  /// Returns <see langword="false"/> if this is running on a Server.
+  /// <inheritdoc cref="ModType.IsLoadingEnabled"/>
+  /// Returns <see langword="false"/> for <see cref="AnimationController"/> if this is running on a Server.
   /// </summary>
   public override bool IsLoadingEnabled(Mod mod) {
     return Main.netMode != NetmodeID.Server;
@@ -13,8 +14,7 @@ public partial class AnimationController : ModType<Player, AnimationController> 
 
   protected sealed override void Register() {
     AnimLoader.Add(this);
-    ModTypeLookup<AnimationController>.Register(this);
   }
 
-  protected override Player CreateTemplateEntity() => null!;
+  protected sealed override Player CreateTemplateEntity() => null!;
 }

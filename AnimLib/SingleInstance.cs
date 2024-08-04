@@ -8,27 +8,20 @@ namespace AnimLib;
 /// </summary>
 /// <typeparam name="T">The type to make Singleton.</typeparam>
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-public abstract class SingleInstance<T> where T : SingleInstance<T> {
-  private static readonly Lazy<T> LazyInstance = new(Initialize);
+public abstract class SingleInstance<T> where T : SingleInstance<T>
+{
+  private static T CreateInstance() => (T)Activator.CreateInstance(typeof(T), true)!;
 
   /// <summary>
   /// The singleton instance of this type.
   /// </summary>
-  public static T Instance => LazyInstance.Value;
+  public static T Instance => _instance ??= CreateInstance();
 
-  private static T Initialize() {
-    AnimLibMod.OnUnload += Unload;
-    return Activator.CreateInstance<T>();
+  private static T? _instance;
+
+  public static void Initialize() {
+    _instance ??= CreateInstance();
   }
 
-  private static void Unload() {
-    if (!LazyInstance.IsValueCreated) {
-      return;
-    }
-
-    // ReSharper disable once SuspiciousTypeConversion.Global
-    if (LazyInstance.Value is IDisposable disposable) {
-      disposable.Dispose();
-    }
-  }
+  public static void Unload() => _instance = null;
 }

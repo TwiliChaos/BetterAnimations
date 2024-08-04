@@ -4,7 +4,8 @@ using AnimLib.Animations;
 namespace AnimLib.Internal;
 
 internal static class AnimLoader {
-  private static readonly Dictionary<Mod, AnimTemplate> ModTemplates = [];
+  private static Dictionary<Mod, AnimTemplate> ModTemplates => _modTemplates ??= [];
+  private static Dictionary<Mod, AnimTemplate>? _modTemplates;
 
   /// <summary>
   /// Called from <see cref="ModType{T,T}"/> <see cref="AnimationController.Register"/>
@@ -48,7 +49,8 @@ internal static class AnimLoader {
   }
 
   internal static void Unload() {
-    ModTemplates.Clear();
+    _modTemplates?.Clear();
+    _modTemplates = null;
   }
 
   // Called from AnimPlayer.Initialize()

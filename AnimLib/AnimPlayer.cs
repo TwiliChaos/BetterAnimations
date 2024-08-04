@@ -24,11 +24,11 @@ public sealed class AnimPlayer : ModPlayer {
       if (_local is null) {
         if (Main.gameMenu) return null;
         _local = Main.LocalPlayer?.GetModPlayer<AnimPlayer>();
-        if (_local is not null) AnimLibMod.OnUnload += () => _local = null;
       }
 
       return _local;
     }
+    set => _local = value;
   }
 
   /// <summary>

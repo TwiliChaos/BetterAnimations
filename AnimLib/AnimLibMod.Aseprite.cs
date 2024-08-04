@@ -1,7 +1,10 @@
 ﻿using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using AnimLib.Animations.Aseprite;
 using AsepriteDotNet.Common;
+using ReLogic.Content.Readers;
 using ReLogic.Content.Sources;
 using ReLogic.Utilities;
 using Terraria.ModLoader.IO;
@@ -29,7 +32,8 @@ public sealed partial class AnimLibMod {
   /// </summary>
   public readonly AssetRepository AseAssets = new(GetAssetReaderCollection());
 
-  private static AssetReaderCollection GetAssetReaderCollection() => Main.instance.Services.Get<AssetReaderCollection>();
+  private static AssetReaderCollection GetAssetReaderCollection() =>
+    Main.instance.Services.Get<AssetReaderCollection>();
 
   /// <summary>
   /// Converts the provided Aseprite <see cref="AsepriteDotNet.Texture"/> to an XNA <see cref="Texture2D"/>.
@@ -60,5 +64,23 @@ public sealed partial class AnimLibMod {
 
     string filename = name + ".rawimg";
     return AseAssets.CreateUntracked<Texture2D>(stream, filename, AssetRequestMode.AsyncLoad);
+  }
+
+  private static void UnloadAse() {
+    // Method exists just to remove our AseReader which was registered in CreateDefaultContentSource()
+
+    const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+    AssetReaderCollection collection = GetAssetReaderCollection();
+    Type collectionType = collection.GetType();
+    var readers = (Dictionary<string, IAssetReader>)collectionType
+      .GetField("_readersByExtension", flags)!
+      .GetValue(collection)!;
+
+    readers.Remove(".ase");
+    readers.Remove(".aseprite");
+
+    string[] extensions = readers.Keys.ToArray();
+    collectionType.GetField("_extensions", flags)!.SetValue(collection, extensions);
   }
 }

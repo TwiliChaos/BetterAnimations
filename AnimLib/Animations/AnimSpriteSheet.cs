@@ -1,14 +1,25 @@
-﻿using System.Linq;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 
 namespace AnimLib.Animations;
 
 [PublicAPI]
-public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, AnimTag[] _tags, Dictionary<string, Vector2[]> _points) {
-  private readonly AnimTag[] _tags = _tags;
-  private readonly Dictionary<string, AnimTextureAtlas> _atlases = _atlases;
-  private readonly Dictionary<string, AnimTag> _tagDictionary = _tags.ToDictionary(tag => tag.Name, tag => tag);
-  private readonly Dictionary<string, Vector2[]> _points = _points;
+public record AnimSpriteSheet {
+  private readonly AnimTag[] _tags;
+  private readonly Dictionary<string, AnimTextureAtlas> _atlases;
+  private readonly Dictionary<string, AnimTag> _tagDictionary;
+  private readonly Dictionary<string, Vector2[]> _points;
+
+  public AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, AnimTag[] _tags, Dictionary<string, Vector2[]> _points) {
+    this._tags = _tags;
+    this._atlases = _atlases;
+    this._points = _points;
+
+    // Avoid .ToDictionary, seems to remain allocated after mod unload
+    _tagDictionary = [];
+    foreach (AnimTag tag in _tags) {
+      _tagDictionary.Add(tag.Name, tag);
+    }
+  }
 
   /// <summary>
   /// Animation tags as they appear in the Aseprite file in the program.
@@ -100,5 +111,11 @@ public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, Ani
         return frames[frameIndex];
       }
     }
+  }
+
+  public void Deconstruct(out Dictionary<string, AnimTextureAtlas> _atlases, out AnimTag[] _tags, out Dictionary<string, Vector2[]> _points) {
+    _atlases = this._atlases;
+    _tags = this._tags;
+    _points = this._points;
   }
 }

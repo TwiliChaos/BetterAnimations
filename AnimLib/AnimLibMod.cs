@@ -1,5 +1,4 @@
 using System.IO;
-using AnimLib.Animations;
 using AnimLib.Compat;
 using AnimLib.Internal;
 using AnimLib.Networking;
@@ -38,24 +37,16 @@ public sealed partial class AnimLibMod : Mod {
   /// </summary>
   public static string GithubProjectName => "AnimLib";
 
-  /// <summary>
-  /// Use this to null static reference types on unload.
-  /// </summary>
-  internal static event Action? OnUnload;
-
-  /// <summary>
-  /// Collects and constructs all <see cref="AnimSpriteSheet"/>s across all other <see cref="Mod"/>s.
-  /// </summary>
-  public override void PostSetupContent() {
-    OnUnload += GlobalCompatConditions.Unload;
-  }
-
   /// <inheritdoc/>
   public override void Unload() {
-    OnUnload?.Invoke();
-    OnUnload = null;
-    Instance = null;
+    GlobalCompatConditions.Unload();
+    ModNetHandler.Unload();
     AnimLoader.Unload();
+
+    UnloadAse();
+
+    AnimPlayer.Local = null;
+    Instance = null;
   }
 
   public override void HandlePacket(BinaryReader reader, int whoAmI) {
