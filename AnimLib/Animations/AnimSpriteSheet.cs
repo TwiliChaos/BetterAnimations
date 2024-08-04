@@ -4,10 +4,11 @@ using JetBrains.Annotations;
 namespace AnimLib.Animations;
 
 [PublicAPI]
-public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, AnimTag[] _tags) {
+public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, AnimTag[] _tags, Dictionary<string, Vector2[]> _points) {
   private readonly AnimTag[] _tags = _tags;
   private readonly Dictionary<string, AnimTextureAtlas> _atlases = _atlases;
   private readonly Dictionary<string, AnimTag> _tagDictionary = _tags.ToDictionary(tag => tag.Name, tag => tag);
+  private readonly Dictionary<string, Vector2[]> _points = _points;
 
   /// <summary>
   /// Animation tags as they appear in the Aseprite file in the program.
@@ -23,6 +24,12 @@ public record AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, Ani
   /// Represents pairs of root layer names and the texture atlas generated from the layer.
   /// </summary>
   public IReadOnlyDictionary<string, AnimTextureAtlas> Atlases => _atlases;
+
+  /// <summary>
+  /// Represents pairs of Yellow root layer names, and the single pixel position on each frame.
+  /// If a frame was missing a pixel, the value will be the center of the sprite.
+  /// </summary>
+  public IReadOnlyDictionary<string, Vector2[]> Points => _points;
 
   public ReadOnlySpan<Rectangle> GetAnimationFrames(string animation, string layer) {
     ArgumentNullException.ThrowIfNull(animation);

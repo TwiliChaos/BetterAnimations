@@ -1,6 +1,7 @@
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Processors;
+using Point = AsepriteDotNet.Common.Point;
 
 namespace AnimLib.Animations.Aseprite.Processors;
 
@@ -42,6 +43,38 @@ public static class AnimSpriteSheetProcessor {
 
     var textureAtlases = AnimTextureAtlasProcessor.Process(file, options);
 
-    return new AnimSpriteSheet(textureAtlases, tags);
+    var pointDict = ProcessPoints(file, options);
+
+    return new AnimSpriteSheet(textureAtlases, tags, pointDict);
+  }
+
+  private static Dictionary<string, Vector2[]> ProcessPoints(AsepriteFile file, ProcessorOptions options) {
+    Dictionary<string, Vector2[]> result = [];
+
+
+    float scale = file.UserData.HasText && file.UserData.Text.Contains("upscale") ? 2 : 1;
+    Vector2 center = new Vector2(file.CanvasWidth, file.CanvasHeight) * scale / 2;
+
+    var layers = file.Layers;
+    foreach (AsepriteLayer layer in layers) {
+      if (layer is { ChildLevel: 0, UserData.HasColor: true } && layer.UserData.Color == UserDataColors.Yellow) {
+        var array = new Vector2[file.FrameCount];
+        Array.Fill(array, center);
+        result.Add(layer.Name, array);
+      }
+    }
+
+    var frames = file.Frames;
+    for (int i = 0; i < frames.Length; i++) {
+      AsepriteFrame frame = frames[i];
+      foreach (AsepriteCel cel in frame.Cels) {
+        if (cel is AsepriteImageCel imageCel && result.TryGetValue(cel.Layer.Name, out var array)) {
+          Point pos = imageCel.Location;
+          array[i] = new Vector2(pos.X, pos.Y) * scale;
+        }
+      }
+    }
+
+    return result;
   }
 }

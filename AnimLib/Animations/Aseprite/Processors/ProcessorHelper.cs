@@ -47,8 +47,7 @@ public static class ProcessorHelper {
   private static Rgba32[]? MergeGroupCels(ProcessorOptions options, AsepriteFrame frame, AsepriteGroupLayer groupLayer) {
     Rgba32[]? flattenedLayerPixels = null;
 
-    var cels = GetGroupCels(groupLayer, frame);
-    foreach (AsepriteCel cel in cels) {
+    foreach (AsepriteCel cel in GetGroupCels(groupLayer, frame)) {
       MergeCel(options, frame, cel, ref flattenedLayerPixels);
     }
 
@@ -59,29 +58,37 @@ public static class ProcessorHelper {
   private static List<AsepriteCel> GetGroupCels(AsepriteGroupLayer groupLayer, AsepriteFrame frame) {
     List<AsepriteCel> result = [];
 
-    int childrenLength = groupLayer.Children.Length;
-    int celsLength = frame.Cels.Length;
+    var children = groupLayer.Children;
+    int childrenLength = children.Length;
+    var cels = frame.Cels;
+    int celsLength = cels.Length;
+
     int jStart = 0;
 
-    // If only we could use Union here...
     for (int i = 0; i < celsLength; i++) {
-      AsepriteCel cel = frame.Cels[i];
-      if (cel.Layer.UserData.HasColor) {
-        var color = cel.Layer.UserData.Color;
+      AsepriteCel cel = cels[i];
+      AsepriteLayer layer = cel.Layer;
+
+      if (layer.UserData.HasColor) {
+        var color = layer.UserData.Color;
         // Ignore Red: not to be imported at all
         // Ignore Green: imported as its own root layer
-        if (color == UserDataColors.Red || color == UserDataColors.Green) {
+        // Ignore Yellow: processed to Vector2s
+        if (color == UserDataColors.Red ||
+            color == UserDataColors.Green ||
+            color == UserDataColors.Yellow) {
           continue;
         }
       }
 
       for (int j = jStart; j < childrenLength; j++) {
-        AsepriteLayer child = groupLayer.Children[j];
-        if (ReferenceEquals(child, cel.Layer)) {
-          result.Add(cel);
-          jStart = j + 1;
-          break;
+        if (!ReferenceEquals(children[j], layer)) {
+          continue;
         }
+
+        result.Add(cel);
+        jStart = j + 1;
+        break;
       }
     }
 
@@ -92,12 +99,17 @@ public static class ProcessorHelper {
     ref Rgba32[]? flattenedLayerPixels) {
     cel = cel is AsepriteLinkedCel linkedCel ? linkedCel.Cel : cel;
 
-    if (options.OnlyVisibleLayers && !cel.Layer.IsVisible) {
-      return false;
-    }
+    // Always import layer with Green userdata
+    // Green cel should be excluded in GetGroupCels
+    AsepriteUserData userData = cel.Layer.UserData;
+    if (!userData.HasColor || userData.Color != UserDataColors.Green) {
+      if (options.OnlyVisibleLayers && !cel.Layer.IsVisible) {
+        return false;
+      }
 
-    if (cel.Layer.IsBackgroundLayer && !options.IncludeBackgroundLayer) {
-      return false;
+      if (cel.Layer.IsBackgroundLayer && !options.IncludeBackgroundLayer) {
+        return false;
+      }
     }
 
     switch (cel) {

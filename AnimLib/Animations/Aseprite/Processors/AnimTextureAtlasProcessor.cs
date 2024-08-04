@@ -70,11 +70,14 @@ public static class AnimTextureAtlasProcessor {
     for (int i = 0; i < file.Layers.Length; i++) {
       AsepriteLayer layer = file.Layers[i];
       AsepriteUserData userData = layer.UserData;
-      if (userData.HasColor && userData.Color == UserDataColors.Red) {
+      if (userData.HasColor && (
+            userData.Color == UserDataColors.Red ||
+            userData.Color == UserDataColors.Yellow)) {
         // Ignore any layer that has Red userdata, regardless of any other settings
         // Some layers we may want to treat as a reference rather than an art asset
+        // Ignore any layer that has Yellow userdata, is meant for processing into Vector2s
         if (layer is AsepriteGroupLayer gl) {
-          // Ignore all children of Red userdata group layer
+          // Ignore all children of Red or Yellow userdata group layer
           i += gl.Children.Length;
         }
 
@@ -98,7 +101,8 @@ public static class AnimTextureAtlasProcessor {
           AsepriteUserData childUserData = childLayer.UserData;
           if (childUserData.HasColor &&
               childUserData.Color == UserDataColors.Red ||
-              childUserData.Color == UserDataColors.Green) {
+              childUserData.Color == UserDataColors.Green ||
+              childUserData.Color == UserDataColors.Yellow) {
             continue;
           }
 
