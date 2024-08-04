@@ -109,14 +109,52 @@ public sealed partial class Animation {
   public DrawData GetDrawData(PlayerDrawSet drawInfo, string layer) {
     ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
-    Player player = drawInfo.drawPlayer;
-    Texture2D texture = GetTexture(layer);
-    Vector2 position = drawInfo.Position - Main.screenPosition + player.Size / 2;
-    Rectangle rect = GetRect(layer);
-    SpriteEffects effect = Controller.Effects;
-    Vector2 origin = new(rect.Width / 2f, rect.Height / 2f);
+    Rectangle sourceRect = GetRect(layer);
 
-    return new DrawData(texture, position, rect, Color.White, Controller.SpriteRotation, origin, 1, effect);
+    return new DrawData {
+      texture = GetTexture(layer),
+      position = drawInfo.Position - Main.screenPosition + drawInfo.drawPlayer.Size / 2,
+      sourceRect = sourceRect,
+      color = Color.White,
+      rotation = Controller.SpriteRotation,
+      origin = sourceRect.Size() / 2,
+      scale = Vector2.One,
+      effect = Controller.Effects,
+    };
+  }
+
+  public void AssignTextureAndRect(ref DrawData data, string layer) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+
+    var textureAtlasMap = SpriteSheet.Atlases;
+    if (!textureAtlasMap.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
+      throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
+    }
+
+    data.texture = atlas.GetTexture();
+    data.sourceRect = SpriteSheet.GetAtlasRect(layer, CurrentFrame.AtlasFrameIndex);
+  }
+
+  public void AssignTextureAndRect(ref DrawData data, string layer, string tagName, int frameIndex) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+    ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+
+    var textureAtlasMap = SpriteSheet.Atlases;
+    if (!textureAtlasMap.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
+      throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
+    }
+
+    if (!TryGetTag(tagName, out AnimTag? tag)) {
+      throw new ArgumentException($"Animation Tag with name \"{tagName}\" does not exist.");
+    }
+
+    var tagFrames = tag.Frames;
+
+    ArgumentOutOfRangeException.ThrowIfNegative(frameIndex);
+    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(frameIndex, tagFrames.Length);
+
+    data.texture = atlas.GetTexture();
+    data.sourceRect = SpriteSheet.GetAtlasRect(layer, tagFrames[frameIndex].AtlasFrameIndex);
   }
 
   /// <summary>
