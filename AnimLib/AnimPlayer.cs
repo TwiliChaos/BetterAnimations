@@ -1,84 +1,59 @@
-using AnimLib.Abilities;
 using AnimLib.Animations;
-using AnimLib.Internal;
 using AnimLib.Networking;
 using JetBrains.Annotations;
 
 namespace AnimLib;
 
 /// <summary>
-/// Main <see cref="ModPlayer"/> class for <see cref="AnimLibMod"/>, contains and updates <see cref="AnimationController"/>.
+/// Main <see cref="ModPlayer"/> class for <see cref="AnimLibMod"/>, contains and updates <see cref="AnimLib.States.State"/>.
 /// </summary>
 [UsedImplicitly]
 public sealed class AnimPlayer : ModPlayer {
-  private static AnimPlayer? _local;
-
-  private bool _abilityNetUpdate;
-
-  internal AnimCharacterCollection Characters =>
-    _characters ??= AnimLoader.SetupCharacterCollection(this);
+  internal AnimCharacterCollection Characters => _characters ??= new AnimCharacterCollection(Player);
   private AnimCharacterCollection? _characters;
 
-  internal static AnimPlayer? Local {
-    get {
-      if (_local is null) {
-        if (Main.gameMenu) return null;
-        _local = Main.LocalPlayer?.GetModPlayer<AnimPlayer>();
-      }
+  private bool _hasInitialized;
 
-      return _local;
+  public override void ModifyMaxStats(out StatModifier health, out StatModifier mana) {
+    base.ModifyMaxStats(out health, out mana);
+
+    // Treating this method as a "PostInitialize",
+    // as it needs to run after all other mods' Initialize
+    // and this is the closest hook after Initialize
+    if (_hasInitialized) {
+      return;
     }
-    set => _local = value;
-  }
 
-  /// <summary>
-  /// The current active <see cref="AnimCharacter"/>.
-  /// </summary>
-  private AnimCharacter? ActiveCharacter => Characters.ActiveCharacter;
-
-  /// <summary>
-  /// Whether any <see cref="AnimCharacter"/>s need to be net-synced.<br />
-  /// When this property is set to <b><see langword="false"/></b>, all
-  /// <see cref="AbilityManager.NetUpdate">AbilityManager.netUpdate</see> on this player
-  /// will also be set to <b><see langword="false"/></b>.<br />
-  /// When any <see cref="AbilityManager.NetUpdate">AbilityManager.netUpdate</see> on this player
-  /// is set to <b><see langword="true"/></b>, this property will also be set to <b><see langword="true"/></b>.
-  /// </summary>
-  internal bool AbilityNetUpdate {
-    get => _abilityNetUpdate;
-    set {
-      _abilityNetUpdate = value;
-      if (value) return;
-      // Propagate false netUpdate downstream
-      foreach (AnimCharacter character in Characters.Values) {
-        if (character.AbilityManager != null)
-          character.AbilityManager.NetUpdate = false;
-      }
+    Characters.Initialize();
+    _hasInitialized = true;
+    if (Main.dedServ) {
+      StatesNet.CreateNetIDs(Characters);
+      StatesNet.AssignNetIDs(Characters);
     }
   }
-
-  internal bool DebugEnabled { get; set; }
 
   /// <inheritdoc/>
   public override void SendClientChanges(ModPlayer clientPlayer) {
-    if (AbilityNetUpdate) {
-      SendAbilityChanges();
-      AbilityNetUpdate = false;
+    if (Characters.IndirectNetUpdate) {
+      ModContent.GetInstance<ModNetHandler>().StatePacketHandler.SendPacket(255, Player.whoAmI);
     }
   }
 
   // ReSharper disable once RedundantOverriddenMember
   public override void CopyClientState(ModPlayer targetCopy) => base.CopyClientState(targetCopy);
 
-  private void SendAbilityChanges() => ModNetHandler.Instance.AbilityPacketHandler.SendPacket(255, Player.whoAmI);
-
   /// <summary>
   /// Updates the <see cref="AnimCharacterCollection.ActiveCharacter"/>.
   /// </summary>
-  public override void PostUpdateRunSpeeds() => ActiveCharacter?.Update();
+  public override void PostUpdateRunSpeeds() {
+    Characters.PreUpdate();
+    Characters.Update();
+  }
 
   /// <summary>
-  /// Updates all <see cref="AnimationController"/>s on this <see cref="Player"/>.
+  /// PostUpdate for the <see cref="AnimCharacterCollection.ActiveCharacter"/>.
   /// </summary>
-  public override void PostUpdate() => ActiveCharacter?.PostUpdate();
+  public override void PostUpdate() {
+    Characters.PostUpdate();
+  }
 }

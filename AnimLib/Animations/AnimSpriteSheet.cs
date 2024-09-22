@@ -1,24 +1,27 @@
-﻿using JetBrains.Annotations;
+﻿using System.Collections.ObjectModel;
+using JetBrains.Annotations;
 
 namespace AnimLib.Animations;
 
 [PublicAPI]
 public record AnimSpriteSheet {
   private readonly AnimTag[] _tags;
-  private readonly Dictionary<string, AnimTextureAtlas> _atlases;
-  private readonly Dictionary<string, AnimTag> _tagDictionary;
-  private readonly Dictionary<string, Vector2[]> _points;
+  private readonly ReadOnlyDictionary<string, AnimTextureAtlas> _atlases;
+  private readonly ReadOnlyDictionary<string, AnimTag> _tagDictionary;
+  private readonly ReadOnlyDictionary<string, Vector2[]> _points;
 
-  public AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> _atlases, AnimTag[] _tags, Dictionary<string, Vector2[]> _points) {
-    this._tags = _tags;
-    this._atlases = _atlases;
-    this._points = _points;
+  public AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> atlases, AnimTag[] tags, Dictionary<string, Vector2[]> points) {
+    _tags = tags;
+    _atlases = atlases.AsReadOnly();
+    _points = points.AsReadOnly();
 
     // Avoid .ToDictionary, seems to remain allocated after mod unload
-    _tagDictionary = [];
-    foreach (AnimTag tag in _tags) {
-      _tagDictionary.Add(tag.Name, tag);
+    Dictionary<string, AnimTag> tagDict = [];
+    foreach (AnimTag tag in tags) {
+      tagDict.Add(tag.Name, tag);
     }
+
+    _tagDictionary = tagDict.AsReadOnly();
   }
 
   /// <summary>
@@ -103,7 +106,7 @@ public record AnimSpriteSheet {
     var tagFrames = tag.Frames;
     while (true) {
       float frameDuration = tagFrames[frameIndex].Duration;
-      if (durationSeconds > frameDuration && frameIndex < tagFrames.Length) {
+      if (durationSeconds > frameDuration && frameIndex < tagFrames.Length - 1) {
         durationSeconds -= frameDuration;
         frameIndex++;
       }
@@ -113,9 +116,26 @@ public record AnimSpriteSheet {
     }
   }
 
-  public void Deconstruct(out Dictionary<string, AnimTextureAtlas> _atlases, out AnimTag[] _tags, out Dictionary<string, Vector2[]> _points) {
-    _atlases = this._atlases;
-    _tags = this._tags;
-    _points = this._points;
+
+  /// <summary>
+  /// Gets the <see cref="AnimTag"/> with the specified <see cref="AnimTag.Name"/>.
+  /// </summary>
+  /// <param name="tagName">The name of the <see cref="AnimTag"/> to retrieve.</param>
+  /// <param name="tag">The resulting tag.</param>
+  /// <returns>
+  /// <see langword="true"/> if a tag with the specified name exists; otherwise, <see langword="false"/>.
+  /// </returns>
+  public bool TryGetTag(string tagName, [NotNullWhen(true)] out AnimTag? tag) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+    return TagDictionary.TryGetValue(tagName, out tag);
+  }
+
+  public void Deconstruct(
+    out ReadOnlyDictionary<string, AnimTextureAtlas> atlases,
+    out ReadOnlySpan<AnimTag> tags,
+    out ReadOnlyDictionary<string, Vector2[]> points) {
+    atlases = _atlases;
+    tags = (ReadOnlySpan<AnimTag>)_tags;
+    points = _points;
   }
 }

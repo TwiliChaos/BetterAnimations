@@ -1,20 +1,30 @@
 using System.IO;
+using JetBrains.Annotations;
 
 namespace AnimLib.Networking;
 
 /// <summary>
 /// Receives all <see cref="ModPacket"/>s and distributes them to the desired <see cref="PacketHandler"/>.
 /// </summary>
-internal class ModNetHandler : SingleInstance<ModNetHandler> {
-  /// <summary>
-  /// Type for <see cref="Networking.AbilityPacketHandler"/>.
-  /// </summary>
-  private const byte AbilityState = 1;
+[UsedImplicitly]
+internal class ModNetHandler : ModSystem {
+  /// <summary> Identifier for <see cref="StateIDsPacketHandler"/>. </summary>
+  private const byte SyncIDs = 1;
 
-  /// <inheritdoc cref="Networking.AbilityPacketHandler"/>
-  internal readonly AbilityPacketHandler AbilityPacketHandler = new(AbilityState);
+  /// <summary> Identifier for <see cref="StatePacketHandler"/>. </summary>
+  private const byte SyncStates = 2;
 
-  private ModNetHandler() { }
+  /// <summary> Identifier for <see cref="FullSyncPacketHandler"/> </summary>
+  private const byte FullSyncStates = 3;
+
+  /// <inheritdoc cref="StateIDsPacketHandler"/>
+  internal readonly StateIDsPacketHandler StateIDsHandler = new(SyncIDs);
+
+  /// <inheritdoc cref="StatePacketHandler"/>
+  internal readonly StatePacketHandler StatePacketHandler = new(SyncStates);
+
+  /// <inheritdoc cref="FullSyncPacketHandler"/>
+  internal readonly FullSyncPacketHandler FullSyncHandler = new(FullSyncStates);
 
   /// <summary>
   /// Sends the received <see cref="ModPacket"/> to the desired <see cref="PacketHandler"/> based on data read from <paramref name="reader"/>.
@@ -23,13 +33,19 @@ internal class ModNetHandler : SingleInstance<ModNetHandler> {
   /// <param name="fromWho">The player that this packet is from.</param>
   internal void HandlePacket(BinaryReader reader, int fromWho) {
     byte packetClass = reader.ReadByte();
-    switch (packetClass) {
-      case AbilityState:
-        AbilityPacketHandler.HandlePacket(reader, fromWho);
-        break;
-      default:
-        Log.Warn($"Unknown Packet {packetClass}");
-        break;
+    PacketHandler? handler = packetClass switch {
+      SyncIDs => StateIDsHandler,
+      SyncStates => StatePacketHandler,
+      FullSyncStates => FullSyncHandler,
+      _ => null
+    };
+
+    if (handler is null) {
+      Log.Warn($"Unknown Packet {packetClass}");
+      return;
     }
+
+
+    handler.HandlePacket(reader, fromWho);
   }
 }

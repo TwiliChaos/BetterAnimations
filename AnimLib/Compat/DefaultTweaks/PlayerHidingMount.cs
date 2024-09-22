@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Terraria.ID;
+﻿using Terraria.ID;
 
 namespace AnimLib.Compat.Implementations;
 
@@ -8,11 +7,11 @@ namespace AnimLib.Compat.Implementations;
 /// mount which hides vanilla player
 /// sprite is active
 /// </summary>
-public class PlayerHidingMount : AnimCompatSystem {
-  public readonly List<int> MountIds = [MountID.Wolf];
+public sealed class PlayerHidingMount : AnimCompatSystem {
+  private readonly List<int> _mountIds = [MountID.Wolf];
 
   public override void PostSetupContent() {
-    (string modName, string[] mounts)[] modMounts = [
+    Span<(string modName, string[] mounts)> modMounts = [
       ("MountAndJourney", [
         "MAJ_SquirrelTransformation",
         "MAJ_ArcticFoxTransformation"
@@ -20,11 +19,13 @@ public class PlayerHidingMount : AnimCompatSystem {
     ];
 
     foreach ((string modName, string[] mounts) in modMounts) {
-      if (ModLoader.Mods.All(x => x.Name != modName))
+      if (!ModLoader.TryGetMod(modName, out Mod mod)) {
         continue;
+      }
+
       foreach (string mount in mounts) {
-        if (ModContent.TryFind(modName, mount, out ModMount m)) {
-          MountIds.Add(m.Type);
+        if (mod.TryFind(mount, out ModMount m)) {
+          _mountIds.Add(m.Type);
         }
         else {
           Log.Warn($"Desired Player Hiding Mount " +
@@ -36,14 +37,7 @@ public class PlayerHidingMount : AnimCompatSystem {
     }
 
     GlobalCompatConditions.AddGraphicsDisableCondition(
-      GetStandardPredicate(p => {
-          if (p.mount is not null && p.mount.Active) {
-            return MountIds.Contains(p.mount.Type);
-          }
-
-          return false;
-        }
-      ));
+      GetStandardPredicate(p => p.mount.Active && _mountIds.Contains(p.mount.Type)));
     Initialized = true;
   }
 }

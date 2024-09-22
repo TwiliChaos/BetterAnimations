@@ -7,13 +7,10 @@ internal class AnimDebugCommand : ModCommand {
   public override string Command => "animdebug";
   public override CommandType Type => CommandType.Chat;
 
-  public override void Action(CommandCaller caller, string input, string[] args) {
-    AnimPlayer? localPlayer = AnimPlayer.Local;
-    if (localPlayer is null) {
-      return;
-    }
+  public static bool DebugEnabled { get; private set; }
 
-    localPlayer.DebugEnabled ^= true;
-    caller.Reply($"Set AnimLib debug mode to {localPlayer.DebugEnabled}");
+  public override void Action(CommandCaller caller, string input, string[] args) {
+    DebugEnabled ^= true;
+    caller.Reply($"Set AnimLib debug mode to {DebugEnabled}");
   }
 }

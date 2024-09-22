@@ -36,6 +36,7 @@ public class AseReader : IAssetReader {
       asepriteFile = AsepriteFileLoader.FromStream("", newStream);
     }
 
+#if DEBUG
     // We have no access to the file name or the mod, so these warnings may just be annoying.
     var warnings = asepriteFile.Warnings;
     if (!warnings.IsEmpty) {
@@ -44,6 +45,7 @@ public class AseReader : IAssetReader {
         Log.Warn(warning);
       }
     }
+#endif
 
     return (AnimSpriteSheetProcessor.Process(asepriteFile) as T)!;
   }

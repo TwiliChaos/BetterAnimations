@@ -51,12 +51,10 @@ public static class AnimSpriteSheetProcessor {
   private static Dictionary<string, Vector2[]> ProcessPoints(AsepriteFile file, ProcessorOptions options) {
     Dictionary<string, Vector2[]> result = [];
 
-
     float scale = file.UserData.HasText && file.UserData.Text.Contains("upscale") ? 2 : 1;
     Vector2 center = new Vector2(file.CanvasWidth, file.CanvasHeight) * scale / 2;
 
-    var layers = file.Layers;
-    foreach (AsepriteLayer layer in layers) {
+    foreach (AsepriteLayer layer in file.Layers) {
       if (layer is { ChildLevel: 0, UserData.HasColor: true } && layer.UserData.Color == UserDataColors.Yellow) {
         var array = new Vector2[file.FrameCount];
         Array.Fill(array, center);
@@ -66,11 +64,10 @@ public static class AnimSpriteSheetProcessor {
 
     var frames = file.Frames;
     for (int i = 0; i < frames.Length; i++) {
-      AsepriteFrame frame = frames[i];
-      foreach (AsepriteCel cel in frame.Cels) {
+      foreach (AsepriteCel cel in frames[i].Cels) {
         if (cel is AsepriteImageCel imageCel && result.TryGetValue(cel.Layer.Name, out var array)) {
           Point pos = imageCel.Location;
-          array[i] = new Vector2(pos.X, pos.Y) * scale;
+          array[i] = new Vector2(pos.X + 0.5f, pos.Y + 0.5f) * scale;
         }
       }
     }

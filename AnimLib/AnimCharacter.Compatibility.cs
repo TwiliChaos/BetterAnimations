@@ -1,12 +1,12 @@
-﻿using AnimLib.Compat;
+﻿using AnimLib.Animations;
+using AnimLib.Compat;
 
-namespace AnimLib.Animations;
+namespace AnimLib;
 
-public partial class AnimationController {
+public abstract partial class AnimCharacter {
   /// <summary>
   /// List names of <see cref="AnimCompatSystem"/>s active by default
-  /// in order to block their work, when <see cref="AnimCharacter"/>
-  /// with this <see cref="AnimationController"/> is active.
+  /// in order to block their work, when <see cref="AnimCharacter"/> is active.
   /// </summary>
   [Obsolete("Will be reworked")] public readonly HashSet<string> AnimCompatSystemBlocklist = [];
 
@@ -15,15 +15,22 @@ public partial class AnimationController {
 
   /// <summary>
   /// State of GraphicsDisable conditions since previous update's evaluation.
-  /// If false, layers should be hidden (add to default visibility hook for
-  /// your custom PlayerDrawLayer). if any of conditions return true,
-  /// associated flag is turned to false, if none - to true
+  /// If <see langword="false"/>, <see cref="PlayerDrawLayer"/>s should not draw.
+  /// <para />
+  /// If any of conditions return <see langword="true"/>,
+  /// associated flag is turned to <see langword="false"/>.
+  /// If none - to <see langword="true"/>
   /// </summary>
+  /// <remarks>
+  /// For AnimLib mods to properly utilize this, their <see cref="PlayerDrawLayer"/>'s
+  /// <see cref="PlayerDrawLayer.GetDefaultVisibility"/> hook must return <see langword="false"/> when this is <see langword="false"/>.
+  /// </remarks>
   public bool GraphicsEnabledCompat { get; private set; } = true;
 
   /// <summary>
   /// State of AnimationsUpdateDisable conditions since previous update's evaluation.
-  /// If false, animations updates will be stopped if not overriden
+  /// If <see langword="false"/>, <see cref="States.AnimatedStateMachine"/> will not receive
+  /// <see cref="States.AnimatedStateMachine.UpdateAnimation"/> calls.
   /// </summary>
   public bool AnimationUpdEnabledCompat { get; private set; } = true;
 
@@ -33,11 +40,11 @@ public partial class AnimationController {
   /// </summary>
   internal void UpdateConditions() {
     if (!_graphicsDisabledDirectly) {
-      GraphicsEnabledCompat = !GlobalCompatConditions.EvaluateDisableGraphics(Player);
+      GraphicsEnabledCompat = !GlobalCompatConditions.EvaluateDisableGraphics(Entity);
     }
 
     if (!_animationUpdateDisabledDirectly) {
-      AnimationUpdEnabledCompat = !GlobalCompatConditions.EvaluateDisableAnimationUpdate(Player);
+      AnimationUpdEnabledCompat = !GlobalCompatConditions.EvaluateDisableAnimationUpdate(Entity);
     }
 
     UpdateCustomConditions();
@@ -80,4 +87,3 @@ public partial class AnimationController {
     _animationUpdateDisabledDirectly = true;
   }
 }
-

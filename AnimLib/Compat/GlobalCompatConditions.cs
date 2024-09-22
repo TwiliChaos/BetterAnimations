@@ -1,9 +1,11 @@
 ﻿using AnimLib.Animations;
 using System.Linq;
+using JetBrains.Annotations;
 
 namespace AnimLib.Compat;
 
-public static class GlobalCompatConditions {
+[UsedImplicitly]
+public class GlobalCompatConditions : ModSystem {
   /// <summary>
   /// The <see cref="Predicate{Player}"/> list to determine if layers' display
   /// should be disabled, contains conditions, if any return true,
@@ -32,10 +34,12 @@ public static class GlobalCompatConditions {
   /// <summary>
   /// Adds <see cref="Predicate{Player}"/> to list
   /// of "should AnimLib mods' graphics be hidden" conditions,
-  /// allows for evaluation of condition for specified player
-  /// if any of predicates returns true during condition check phase
-  /// <see cref="AnimationController.GraphicsEnabledCompat"/> becomes false until the
+  /// allows for evaluation of condition for specified player.
+  /// <para />
+  /// If any of predicates returns true during condition check phase
+  /// <see cref="AnimCharacter.GraphicsEnabledCompat"/> becomes false until the
   /// next evaluation.
+  /// <para />
   /// Use this for compatibility, if you want to add trigger for
   /// disabling of PlayerDrawLayers' changes
   /// (hiding vanilla layers and displaying game character)
@@ -49,15 +53,15 @@ public static class GlobalCompatConditions {
   /// of "should AnimLib mods' animation updates be disabled" conditions,
   /// allows for evaluation of condition for specified player
   /// if any of predicates returns true during condition check phase
-  /// <see cref="AnimationController.AnimationUpdEnabledCompat"/> becomes false until the
+  /// <see cref="AnimCharacter.AnimationUpdEnabledCompat"/> becomes false until the
   /// next evaluation.
   /// Use this for compatibility, if you want to add trigger for
-  /// disabling of animation (if using AnimationController) updating
+  /// disabling of animation updating
   /// </summary>
   public static void AddAnimationUpdateDisableCondition(Predicate<Player> p) =>
     DisableAnimationsUpdating.Add(p);
 
-  internal static void Unload() {
+  public override void Unload() {
     DisableGraphicsOrPredicates.Clear();
     DisableAnimationsUpdating.Clear();
   }

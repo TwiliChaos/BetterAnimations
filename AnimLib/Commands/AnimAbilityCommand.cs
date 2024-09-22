@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using AnimLib.Abilities;
+using AnimLib.States;
 using JetBrains.Annotations;
 
 namespace AnimLib.Commands;
@@ -9,93 +9,99 @@ namespace AnimLib.Commands;
 internal class AnimAbilityCommand : ModCommand {
   public override string Command => "animability";
 
-  public override string Usage => "/animability <mod> [ability] [level]";
-  public override string Description => "Get or set the ability level.";
+  public override string Usage => "/animability <character> [ability] [level]";
+
+  public override string Description =>
+    "/animability -> When exactly one character is registered, acts as the below command.\n" +
+    "/animability <character> -> View the specified character's abilities.\n" +
+    "/animability <character> [ability] -> View the specified ability's information.\n" +
+    "/animability <character> [ability] [level] -> Sets the specified ability's level.";
 
   public override CommandType Type => CommandType.Chat;
 
   public override void Action(CommandCaller caller, string input, string[] args) {
     Message message = Action(caller, args);
-    caller.Reply(message.Text, message.Color);
+    if (message.Text != string.Empty) {
+      caller.Reply(message.Text, message.Color);
+    }
   }
 
   private static Message Action(CommandCaller caller, IReadOnlyList<string> args) {
-    int idx = 0;
-
-    AnimPlayer player = caller.Player.GetModPlayer<AnimPlayer>();
-    AnimCharacterCollection characters = player.Characters;
-
 #if !DEBUG
-    if (!player.DebugEnabled) {
+    if (!AnimDebugCommand.DebugEnabled) {
       return Error("This command cannot be used outside of debug mode.");
     }
 #endif
 
-    if (characters.Count == 0) {
-      return Error($"This command cannot be used when no mods are using {nameof(AnimLib)}.");
+    int idx = 0; // Index of args, incremented in HasNextArg
+    string arg;
+
+    AnimPlayer player = caller.Player.GetModPlayer<AnimPlayer>();
+    AnimCharacterCollection characters = player.Characters;
+    AnimCharacter character;
+
+    switch (characters.Children.Count) {
+      case 0:
+        return Warn($"This command cannot be used when no characters are registered to {nameof(AnimLib)}.");
+      case 1:
+        character = characters.Characters.First();
+        break;
+      case > 1:
+        if (!HasNextArg(out arg)) {
+          caller.Reply($"Must specify character when more than one is registered {nameof(AnimLib)}.", Color.Yellow);
+          foreach (AnimCharacter c in characters.Characters) {
+            caller.Reply("  " + c.Name);
+          }
+
+          return None();
+        }
+
+        if (!characters.ChildrenByType.TryGetValue(arg, out State? state)) {
+          return Error($"{arg} is not a valid character");
+        }
+
+        character = (AnimCharacter)state;
+        break;
+      default: throw new UnreachableException("Count is less than 0");
     }
 
-    if (!HasNextArg(out string arg) && characters.Count > 1) {
-      // Attempt to view abilities but more than one mod loaded
-      return Error($"Must specify mod when more than one mod is using {nameof(AnimLib)}.");
-    }
-
-    if (!ModLoader.TryGetMod(arg, out Mod targetMod)) {
-      // We'll allow not specifying mod only if exactly one mod is using AnimLib
-      if (characters.Count > 1) {
-        // Attempt to write value to an ability but more than one loaded
-        return Error($"Must specify mod when more than one mod is using {nameof(AnimLib)}.");
-      }
-
-      // Only one mod is loaded, command implicitly refers to that mod
-      targetMod = characters.Keys.First();
-      idx--;
-    }
-
-    if (!characters.TryGetValue(targetMod, out AnimCharacter? character)) {
-      return Error($"Mod {targetMod} does not use AnimLib.");
-    }
-
-    AbilityManager? manager = character.AbilityManager;
-    if (manager is null) {
-      return Error($"Mod {targetMod} does not have abilities.");
-    }
+    var abilityStateMachines = character.AbilityStates;
 
     if (!HasNextArg(out arg)) {
       // Command reading list of abilities and their stats
-      StringBuilder sb = new();
-      foreach (Ability a in manager) {
-        sb.AppendLine(a.ToString());
+      foreach (AbilityState state in abilityStateMachines) {
+        caller.Reply(state.DebugText());
       }
 
-      return Success(sb.ToString());
+      return None();
     }
 
-    Ability? ability;
-    if (int.TryParse(arg, out int id)) {
-      if (!manager.TryGet(id, out ability)) {
-        return Error("Specified ability ID is out of range.");
+    AbilityState? asm = null;
+
+    foreach (AbilityState a in abilityStateMachines) {
+      if (!string.Equals(a.Name, arg, StringComparison.OrdinalIgnoreCase)) {
+        continue;
       }
-    }
-    else {
-      ability = manager.FirstOrDefault(a => string.Equals(a.Name, arg, StringComparison.OrdinalIgnoreCase));
-      if (ability is null) {
-        return Error($"\"{arg}\" is not a valid ability name.");
-      }
+
+      asm = a;
+      break;
     }
 
-    ILevelable? levelable = ability as ILevelable;
+    if (asm is null) {
+      return Error($"\"{arg}\" is not a valid ability name.");
+    }
+
+    int level = asm.Level;
+    int maxLevel = asm.MaxLevel;
     if (!HasNextArg(out arg)) {
       // Command is reading specific ability
-      string msg = $"{ability.GetType().Name} is currently {(ability.Unlocked ? "Unlocked" : "Locked")} ";
-      if (levelable is not null) {
-        msg += $" at level {levelable.Level}/{levelable.MaxLevel}";
-      }
+      string msg = $"{asm.GetType().Name} is {(asm.Unlocked ? "Unlocked" : "Locked")} ";
+      msg += $" at level {level}/{maxLevel}";
 
       return Success(msg);
     }
 
-    if (!int.TryParse(arg, out int level)) {
+    if (!int.TryParse(arg, out level)) {
       return Error($"Argument {arg} must be a number.");
     }
 
@@ -103,15 +109,12 @@ internal class AnimAbilityCommand : ModCommand {
       return Error($"Argument {arg} must be a positive number.");
     }
 
-    if (levelable is null) {
-      return Error($"{ability.Name} cannot be leveled.");
-    }
+    asm.Level = level;
 
-    levelable.Level = level;
-    return level > levelable.MaxLevel
-      ? SuccessWarn(
-        $"{ability.GetType().Name} level set to {levelable.Level}/{levelable.MaxLevel}. This level is above max level, and is not supported.")
-      : Success($"{ability.GetType().Name} level set to {levelable.Level}/{levelable.MaxLevel}.");
+    string name = asm.Name;
+    return level > maxLevel
+      ? SuccessWarn($"{name} level set to {level}/{maxLevel}. This is above max level, and is not supported.")
+      : Success($"{name} level set to {level}/{maxLevel}.");
 
     bool HasNextArg(out string argument) {
       if (args.Count <= idx) {
@@ -126,7 +129,9 @@ internal class AnimAbilityCommand : ModCommand {
 
   private static Message Error(string message) => new(message, Color.Red);
   private static Message SuccessWarn(string message) => new(message, Color.GreenYellow);
+  private static Message Warn(string message) => new(message, Color.Yellow);
   private static Message Success(string message) => new(message, Color.LightGreen);
+  private static Message None() => new(string.Empty, Color.White);
 
   private readonly ref struct Message(string text, Color color) {
     public readonly Color Color = color;

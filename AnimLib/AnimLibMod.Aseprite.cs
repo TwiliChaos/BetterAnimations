@@ -22,7 +22,7 @@ public sealed partial class AnimLibMod {
   /// unless this <see cref="AseReader"/>, or a derivative of it, is added to tML proper.
   /// </remarks>
   public override IContentSource CreateDefaultContentSource() {
-    GetAssetReaderCollection().RegisterReader(new AseReader(), ".ase", ".aseprite");
+    GetAssetReaderCollection()?.RegisterReader(new AseReader(), ".ase", ".aseprite");
     return base.CreateDefaultContentSource();
   }
 
@@ -32,7 +32,7 @@ public sealed partial class AnimLibMod {
   /// </summary>
   public readonly AssetRepository AseAssets = new(GetAssetReaderCollection());
 
-  private static AssetReaderCollection GetAssetReaderCollection() =>
+  private static AssetReaderCollection? GetAssetReaderCollection() =>
     Main.instance.Services.Get<AssetReaderCollection>();
 
   /// <summary>
@@ -47,6 +47,7 @@ public sealed partial class AnimLibMod {
   /// </remarks>
   internal Asset<Texture2D> AseTextureToTexture2DAsset(Texture aseTexture, string name) {
     // We do not use "using" here, the reader will close the stream once it creates the Texture2D.
+    // Closed in ImageIO.ReadRaw()
     MemoryStream stream = new();
 
     // We create a stream that represents a "rawimg" file so that an existing reader can create the Asset<Texture2D> for us.
@@ -58,22 +59,27 @@ public sealed partial class AnimLibMod {
         writer.Write(t.PackedValue);
       }
 
-      stream.Position = 0;
       writer.Close();
+      stream.Position = 0;
     }
 
     string filename = name + ".rawimg";
     return AseAssets.CreateUntracked<Texture2D>(stream, filename, AssetRequestMode.AsyncLoad);
   }
 
-  private static void UnloadAse() {
+  /// <inheritdoc/>
+  public override void Unload() {
     // Method exists just to remove our AseReader which was registered in CreateDefaultContentSource()
 
     const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
 
-    AssetReaderCollection collection = GetAssetReaderCollection();
-    Type collectionType = collection.GetType();
-    var readers = (Dictionary<string, IAssetReader>)collectionType
+    AssetReaderCollection? collection = GetAssetReaderCollection();
+    if (collection is null) {
+      return;
+    }
+
+    Type type = collection.GetType();
+    var readers = (Dictionary<string, IAssetReader>)type
       .GetField("_readersByExtension", flags)!
       .GetValue(collection)!;
 
@@ -81,6 +87,7 @@ public sealed partial class AnimLibMod {
     readers.Remove(".aseprite");
 
     string[] extensions = readers.Keys.ToArray();
-    collectionType.GetField("_extensions", flags)!.SetValue(collection, extensions);
+    type.GetField("_extensions", flags)!
+      .SetValue(collection, extensions);
   }
 }

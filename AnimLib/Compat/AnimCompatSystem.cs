@@ -1,12 +1,14 @@
-﻿namespace AnimLib.Compat;
+﻿using JetBrains.Annotations;
 
+namespace AnimLib.Compat;
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract class AnimCompatSystem : ModSystem {
   /// <summary>
   /// Set this flag to true, if system activation
   /// succeed and predicates were registered
   /// </summary>
   protected bool Initialized;
-
 
   /// <summary>
   /// Set this flag to true, if system activation
@@ -35,10 +37,7 @@ public abstract class AnimCompatSystem : ModSystem {
   /// </summary>
   public bool IsBlockListed(AnimPlayer player) {
     AnimCharacter? character = player.Characters.ActiveCharacter;
-    return character is not null && (
-      (character.AbilityManager?.AnimCompatSystemBlocklist.Contains(Name) ?? false) ||
-      (character.AnimationController?.AnimCompatSystemBlocklist.Contains(Name) ?? false)
-    );
+    return character?.AnimCompatSystemBlocklist.Contains(Name) ?? false;
   }
 
   /// <summary>
