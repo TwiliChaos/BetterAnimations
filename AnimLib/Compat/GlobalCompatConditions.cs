@@ -1,5 +1,4 @@
-﻿using AnimLib.Animations;
-using System.Linq;
+﻿using System.Linq;
 using JetBrains.Annotations;
 
 namespace AnimLib.Compat;

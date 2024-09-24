@@ -81,11 +81,8 @@ public sealed class AnimCharacterCollection : StateMachine {
   }
 
   internal void NetSyncAll(ISync sync) {
-    var iter = sync.SyncEnumerate(this,
-      GetAllChildrenCount,
-      GetAllChildren,
-      WriteChildId,
-      ReadChildId);
+    var iter = sync.SyncEnumerate(this, GetAllChildrenCount, GetAllChildren, WriteChildId, ReadChildId);
+
     foreach (State? netUpdateChild in iter) {
       netUpdateChild.NetSyncInternal(sync);
     }

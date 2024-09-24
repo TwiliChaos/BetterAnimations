@@ -1,5 +1,4 @@
-﻿using AnimLib.Animations;
-using AnimLib.Compat;
+﻿using AnimLib.Compat;
 
 namespace AnimLib;
 
