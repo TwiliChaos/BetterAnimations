@@ -48,9 +48,9 @@ public abstract partial class State(Entity entity) {
   }
 
   /// <summary>
-  /// Time this State was active, in frames.
+  /// Time this State was active, in ticks.
   /// <para>
-  /// This is incremented every frame before <see cref="State.OnUpdate"/>,
+  /// This is incremented every tick before <see cref="State.OnUpdate"/>,
   /// and is reset to 0 before <see cref="State.OnEnter"/>/<see cref="State.OnExit"/>.
   /// </para>
   /// This property is always synced for calls to <see cref="NetSync"/>, and can safely be used for conditional syncing.
@@ -153,6 +153,9 @@ public abstract partial class State(Entity entity) {
 
   /// <summary>
   /// Method called once the parent <see cref="CompositeState"/> actives this as its child <see cref="State"/>.
+  /// <para />
+  /// If anything set here, or in <see cref="OnPreUpdateInterruptible"/>, needs to be synced, =
+  /// set <see cref="NetUpdate"/> to <see langword="true"/> here.
   /// </summary>
   /// <seealso cref="OnExit"/>
   protected virtual void OnEnter(State? fromState) {
@@ -162,19 +165,24 @@ public abstract partial class State(Entity entity) {
   /// Method called once the parent <see cref="CompositeState"/> switches from this child <see cref="State"/>
   /// to a different <see cref="State"/>.
   /// </summary>
+  /// <remarks>
+  /// Since a <see cref="State"/> can get exited for any reason, including "stun" states or dying,
+  /// this method should be used to clean up things, such as killing or restoring dependent entities,
+  /// rather than perform "happy path" last tick behaviours.
+  /// </remarks>
   /// <seealso cref="OnEnter"/>
   protected virtual void OnExit() {
   }
 
   /// <summary>
-  /// Called every frame, when this is an active state.
+  /// Called every tick, when <see cref="IsActive"/> is <see langword="true"/>.
   /// This method should include transition to other states when necessary. This method should not modify player states.
   /// </summary>
   protected virtual void OnPreUpdate() {
   }
 
   /// <summary>
-  /// Called every frame, if this instance was added as the "to" state in a
+  /// Called every tick, if this instance was added as the "to" state in a
   /// <see cref="StateMachine.AddInterruptible{TFrom}"/> call, and the "TFrom" state is currently active.
   /// <para />
   /// Returning <see langword="true"/> will transition the active state to this state.
@@ -189,14 +197,14 @@ public abstract partial class State(Entity entity) {
   protected internal virtual bool OnPreUpdateInterruptible(State activeState) => false;
 
   /// <summary>
-  /// Called every frame, when this is an active state.
+  /// Called every tick, when <see cref="IsActive"/> is <see langword="true"/>.
   /// This method should modify player state when necessary. This method should not include transitions to other states.
   /// </summary>
   protected virtual void OnUpdate() {
   }
 
   /// <summary>
-  /// Called every frame. Note that this is called even when this state is not active.
+  /// Called every tick. Note that this is called even when this state is not active.
   /// Check <see cref="IsActive"/> if needed.
   /// </summary>
   protected virtual void OnPostUpdate() {

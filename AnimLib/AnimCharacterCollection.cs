@@ -95,15 +95,26 @@ public sealed class AnimCharacterCollection : StateMachine {
     static State ReadChildId(AnimCharacterCollection me, BinaryReader reader) => me.GetChild(reader.ReadInt16());
   }
 
+  /// <summary>
+  /// If only one nested child needs a <see cref="State.NetUpdate"/>,
+  /// this method will call the non-internal <see cref="State.NetSync"/>,
+  /// "<inheritdoc cref="StateMachine.NetSyncActiveChild"/>"
+  /// and call that one child's <see cref="State.NetSyncInternal"/>
+  /// <para />
+  /// If more than one nested child requires an update,
+  /// instead performs base class functionality (all the below):
+  /// <para />
+  /// Calls StateMachine:
+  /// <para><inheritdoc cref="StateMachine.NetSyncInternal"/></para>
+  /// End StateMachine.
+  /// </summary>
+  /// <param name="sync"></param>
   internal override void NetSyncInternal(ISync sync) {
-    NetSyncActiveChild(sync);
-
     // Should reduce packet size
     if (sync is IWriteSync writeSync && TryWriteSingleUpdate(writeSync) ||
         sync is IReadSync readSync && TryReadSingleUpdate(readSync)) {
       return;
     }
-    if (!Main.dedServ) Main.NewText($"[{Main.time}] Syncing Multiple Children");
 
     base.NetSyncInternal(sync);
   }
@@ -119,8 +130,9 @@ public sealed class AnimCharacterCollection : StateMachine {
       return false;
     }
 
-    State child = GetAllNetUpdateChildren(includeIndirect: false).First();
-    if (!Main.dedServ) Main.NewText($"[{Main.time}] Writing Single Child {child.Name}");
+    NetSync(write);
+    NetSyncActiveChild(write);
+    State child = GetAllNetChildren(includeIndirect: false).First();
     writer.Write7BitEncodedInt(child.NetId);
     child.NetSyncInternal(write);
     return true;
@@ -134,9 +146,10 @@ public sealed class AnimCharacterCollection : StateMachine {
       return false;
     }
 
+    NetSync(read);
+    NetSyncActiveChild(read);
     int id = reader.Read7BitEncodedInt();
     State child = GetChild(id);
-    if (!Main.dedServ) Main.NewText($"[{Main.time}] Reading Single Child {child.Name}");
     child.NetSyncInternal(read);
     return true;
   }

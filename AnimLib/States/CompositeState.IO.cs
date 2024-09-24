@@ -5,6 +5,15 @@ using AnimLib.Networking;
 namespace AnimLib.States;
 
 public abstract partial class CompositeState {
+  /// <summary>
+  /// Calls State:
+  /// <para><inheritdoc cref="State.NetSyncInternal"/></para>
+  /// End State.
+  /// <para />
+  /// If any children have <see cref="State.NetUpdate"/> or <see cref="State.IndirectNetUpdate"/>,
+  /// they will have their <see cref="State.NetSyncInternal"/> called.
+  /// </summary>
+  /// <param name="sync"></param>
   internal override void NetSyncInternal(ISync sync) {
     base.NetSyncInternal(sync);
 
@@ -12,36 +21,27 @@ public abstract partial class CompositeState {
       return;
     }
 
-    var netUpdateChildren = NetSyncUpdateChildren(sync);
-    foreach (State? netUpdateChild in netUpdateChildren) {
+    var netChildren = sync.SyncEnumerate(this, GetNetChildrenCount, GetNetChildren, WriteChildId, ReadChildId);
+
+    foreach (State? netUpdateChild in netChildren) {
       netUpdateChild.NetSyncInternal(sync);
     }
+
+    return;
+
+    static int GetNetChildrenCount(CompositeState me) => me.GetNetUpdateChildren().Count();
+    static IEnumerable<State> GetNetChildren(CompositeState me) => me.GetNetUpdateChildren();
+    static void WriteChildId(BinaryWriter writer, State child) => writer.Write(child.NetId);
+    static State ReadChildId(CompositeState me, BinaryReader reader) => me.GetChild(reader.ReadInt16());
   }
 
-  private protected IEnumerable<State> NetSyncUpdateChildren(ISync sync) {
-    return sync.SyncEnumerate(this,
-      NetChildrenCount,
-      NetUpdateChildren,
-      NetWriteChildIdentifier,
-      NetReadChildIdentifier);
-
-    static int NetChildrenCount(CompositeState state) => state.GetNetUpdateChildren(true).Count();
-    static IEnumerable<State> NetUpdateChildren(CompositeState state) => state.GetNetUpdateChildren(true);
-    static void NetWriteChildIdentifier(BinaryWriter writer, State child) => writer.Write(child.NetId);
-    static State NetReadChildIdentifier(CompositeState state, BinaryReader reader) => state.GetChild(reader.ReadInt16());
-  }
-
-  private protected IEnumerable<State> GetNetUpdateChildren(bool includeIndirect) =>
-    includeIndirect
-      ? _children.Where(state => state.NetUpdate || state.IndirectNetUpdate)
-      : _children.Where(state => state.NetUpdate);
-
-  private protected int GetNetChildrenCount(bool includeIndirect) => GetNetUpdateChildren(includeIndirect).Count();
+  private IEnumerable<State> GetNetUpdateChildren() =>
+    _children.Where(state => state.NetUpdate || state.IndirectNetUpdate);
 
   private protected int GetAllNetChildrenCount(bool includeIndirect = true) =>
-    GetAllNetUpdateChildren(includeIndirect).Count();
+    GetAllNetChildren(includeIndirect).Count();
 
-  private protected IEnumerable<State> GetAllNetUpdateChildren(bool includeIndirect) =>
+  private protected IEnumerable<State> GetAllNetChildren(bool includeIndirect) =>
     includeIndirect
       ? AllChildren.Where(state => state.NetUpdate || state.IndirectNetUpdate)
       : AllChildren.Where(state => state.NetUpdate);

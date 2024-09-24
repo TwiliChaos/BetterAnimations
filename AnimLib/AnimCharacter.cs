@@ -240,12 +240,4 @@ public abstract partial class AnimCharacter : ConcurrentState {
   /// <param name="tag"> An instance of <see cref="TagCompound"/> containing <see cref="States.AbilityState"/> save data. </param>
   protected virtual void LoadCustomData(TagCompound tag) {
   }
-
-  internal override void NetSyncInternal(ISync sync) {
-    foreach (AbilityState abilityState in AbilityStates) {
-      abilityState.SyncFromCharacter(sync);
-    }
-
-    base.NetSyncInternal(sync);
-  }
 }

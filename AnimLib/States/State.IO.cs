@@ -61,17 +61,24 @@ public abstract partial class State {
   private bool _netUpdate;
   private bool _indirectNetUpdate;
 
+  /// <summary>
+  /// Syncs <see cref="ActiveTime"/>, and calls the non-internal <see cref="NetSync"/>.
+  /// </summary>
+  /// <param name="sync"></param>
+  /// <remarks>
+  /// If overriding this method, make sure to always call the base method.
+  /// </remarks>
   internal virtual void NetSyncInternal(ISync sync) {
     IReadSync? read = sync as IReadSync;
     if (read is not null && !Main.dedServ) {
-      Main.NewText($"{Main.time} Read [{Name}] Before Pos: {read.Reader.BaseStream.Position}");
+      Log.Debug($"{Main.time} Read [{Name}] Before Pos: {read.Reader.BaseStream.Position}");
     }
 
     sync.Sync7BitEncodedInt(ref _activeTime);
     NetSync(sync);
 
     if (read is not null && !Main.dedServ) {
-      Main.NewText($"{Main.time} Read [{Name}] After Pos: {read.Reader.BaseStream.Position}");
+      Log.Debug($"{Main.time} Read [{Name}] After Pos: {read.Reader.BaseStream.Position}");
     }
 
     if (Main.dedServ) {
@@ -90,6 +97,11 @@ public abstract partial class State {
   /// cast as <see cref="IReadSync"/> or <see cref="IWriteSync"/> to access their respective
   /// <see cref="IReadSync.Reader"/> or <see cref="IWriteSync.Writer"/>.
   /// </param>
+  /// <remarks>
+  /// To reduce packet size, if there's anything that only needs to be synced at the start of the state,
+  /// check <c>if (ActiveTime == 0)</c>,
+  /// and set <see cref="NetUpdate"/> to <see langword="true"/> in <see cref="OnEnter"/>.
+  /// </remarks>
   protected virtual void NetSync(ISync sync) {
   }
 

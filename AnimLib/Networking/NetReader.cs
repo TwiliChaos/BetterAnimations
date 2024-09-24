@@ -186,8 +186,8 @@ public readonly struct NetReader(BinaryReader reader) : IReadSync {
   }
 
   IEnumerable<TValue> ISync.SyncEnumerate<TOwner, TValue>(TOwner owner,
-    Func<TOwner, int> count,
-    Func<TOwner, IEnumerable<TValue>> onWrite,
+    Func<TOwner, int> onWriteCount,
+    Func<TOwner, IEnumerable<TValue>> onWriteIterator,
     Action<BinaryWriter, TValue> writeFunc,
     Func<TOwner, BinaryReader, TValue> readFunc) {
     int loopCount = Reader.Read7BitEncodedInt();
@@ -336,12 +336,12 @@ public readonly struct NetWriter(BinaryWriter writer) : IWriteSync {
   }
 
   IEnumerable<TValue> ISync.SyncEnumerate<TOwner, TValue>(TOwner owner,
-    Func<TOwner, int> count,
-    Func<TOwner, IEnumerable<TValue>> onWrite,
+    Func<TOwner, int> onWriteCount,
+    Func<TOwner, IEnumerable<TValue>> onWriteIterator,
     Action<BinaryWriter, TValue> writeFunc,
     Func<TOwner, BinaryReader, TValue> readFunc) {
-    Writer.Write7BitEncodedInt(count(owner));
-    foreach (TValue t in onWrite(owner)) {
+    Writer.Write7BitEncodedInt(onWriteCount(owner));
+    foreach (TValue t in onWriteIterator(owner)) {
       writeFunc(Writer, t);
       yield return t;
     }
@@ -546,13 +546,13 @@ public interface ISync {
   /// </summary>
   /// <param name="owner">
   /// The object which owns the enumeration.
-  /// This is used as an argument for <paramref name="count"/>, <paramref name="onWrite"/>, and <paramref name="readFunc"/>.
+  /// This is used as an argument for <paramref name="onWriteCount"/>, <paramref name="onWriteIterator"/>, and <paramref name="readFunc"/>.
   /// </param>
-  /// <param name="count">
+  /// <param name="onWriteCount">
   /// Function to get number of times to enumerate for.
   /// Used only when writing, ignored when reading.
   /// </param>
-  /// <param name="onWrite">
+  /// <param name="onWriteIterator">
   /// <see cref="IEnumerable{T}"/> to loop through for when writing.
   /// Used only when writing, ignored when reading.
   /// </param>
@@ -568,14 +568,17 @@ public interface ISync {
   /// <typeparam name="TValue">The type of enumerated value.</typeparam>
   /// <returns></returns>
   /// <remarks>
-  /// This method assumes no need to enumerate more than 255 times on type <typeparamref name="TValue"/>.
-  /// For syncing a byte array, use <see cref="Sync(ref byte[])"/>
+  /// When writing, this method writes the return value of <paramref name="onWriteCount"/>.
+  /// It will iterate over <paramref name="onWriteIterator"/>,
+  /// calling <paramref name="writeFunc"/> on each of them.
   /// <para />
+  /// When reading, this method will read the count,
+  /// and in a for loop, call <paramref name="readFunc"/>.
   /// <typeparamref name="TOwner"/>/<paramref name="owner"/> exists to avoid closures.
   /// </remarks>
   IEnumerable<TValue> SyncEnumerate<TOwner, TValue>(TOwner owner,
-    Func<TOwner, int> count,
-    Func<TOwner, IEnumerable<TValue>> onWrite,
+    Func<TOwner, int> onWriteCount,
+    Func<TOwner, IEnumerable<TValue>> onWriteIterator,
     Action<BinaryWriter, TValue> writeFunc,
     Func<TOwner, BinaryReader, TValue> readFunc)
     where TOwner : class;

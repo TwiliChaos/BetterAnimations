@@ -1,13 +1,15 @@
 ﻿using System.Text;
-using AnimLib.Networking;
 
 namespace AnimLib.States;
 
 /// <summary>
-/// <see cref="State"/> with additional logic such as Leveling, Cooldown. Requires that <see cref="State"/>
-/// "Entity" would be of type Player.
+/// <see cref="State"/> with additional logic such as Leveling and Cooldown.
+/// <para />
+/// This class also includes <see cref="Save"/>/<see cref="Load"/> functionality
+/// <para />
+/// This class requires that <see cref="State.Entity"/> is of type <see cref="Player"/>.
 /// </summary>
-/// <param name="player"></param>
+/// <param name="player">The instance of <see cref="Player"/> this state would belong to.</param>
 public abstract partial class AbilityState(Player player) : State(player) {
   public override Player Entity => (Player)base.Entity;
 
@@ -185,9 +187,5 @@ public abstract partial class AbilityState(Player player) : State(player) {
     }
 
     return sb.ToString();
-  }
-
-  internal void SyncFromCharacter(ISync sync) {
-    sync.Sync7BitEncodedInt(ref _level);
   }
 }

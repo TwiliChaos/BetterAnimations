@@ -4,17 +4,28 @@ using AnimLib.Networking;
 namespace AnimLib.States;
 
 public abstract partial class StateMachine {
+  /// <summary>
+  /// <inheritdoc cref="NetSyncActiveChild"/>
+  /// <para />
+  /// Calls CompositeState:
+  /// <para />
+  /// <inheritdoc cref="CompositeState.NetSyncInternal"/>
+  /// <para />
+  /// End CompositeState.
+  /// </summary>
+  /// <param name="sync"></param>
   internal override void NetSyncInternal(ISync sync) {
     NetSyncActiveChild(sync);
     base.NetSyncInternal(sync);
   }
 
+  /// <summary>
+  /// Syncs the <see cref="ActiveChild"/>, by <see cref="State.NetId"/>.
+  /// </summary>
+  /// <param name="sync"></param>
   private protected void NetSyncActiveChild(ISync sync) {
     State? child = ActiveChild;
-    sync.SyncNullable(this, ref child,
-      WriteId,
-      ReadId,
-      ReadNull);
+    sync.SyncNullable(this, ref child, WriteId, ReadId, ReadNull);
   }
 
   private static void WriteId(BinaryWriter writer, State state) {

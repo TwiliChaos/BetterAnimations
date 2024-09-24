@@ -15,8 +15,8 @@ public abstract partial class AnimCharacter {
   public TagCompound Save() {
     TagCompound tag = [];
     foreach (AbilityState state in AbilityStates) {
-      TagCompound? stateTag = state.Save();
-      if (stateTag is not null && stateTag.Count > 0) {
+      TagCompound stateTag = state.Save();
+      if (stateTag.Count > 0) {
         tag[state.Name] = stateTag;
       }
     }
@@ -40,8 +40,19 @@ public abstract partial class AnimCharacter {
     LoadCustomData(tag);
   }
 
-  protected override void NetSync(ISync sync) {
+  /// <summary>
+  /// Syncs <see cref="IsEnabled"/>.
+  /// <para />
+  /// Calls ConcurrentState:
+  /// <para><inheritdoc cref="ConcurrentState.NetSyncInternal"/></para>
+  /// End ConcurrentState.
+  /// </summary>
+  internal override void NetSyncInternal(ISync sync) {
     sync.Sync(ref _isEnabled);
-    base.NetSync(sync);
+    foreach (AbilityState abilityState in AbilityStates) {
+      abilityState.SyncLevel(sync);
+    }
+
+    base.NetSyncInternal(sync);
   }
 }
