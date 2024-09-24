@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace AnimLib;
 
 internal static class Log {
@@ -9,10 +11,10 @@ internal static class Log {
     AnimLibMod.Instance.Logger.Warn(message);
   }
 
+  [Conditional("DEBUG")]
   internal static void Debug(string message) {
-#if DEBUG
     AnimLibMod.Instance.Logger.Debug(message);
-#endif
+    Main.NewText(message, Color.Gray);
   }
 
   internal static void Info(string message) {
