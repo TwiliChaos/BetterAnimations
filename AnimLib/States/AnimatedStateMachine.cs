@@ -1,5 +1,4 @@
 ﻿using AnimLib.Animations;
-using AnimLib.Commands;
 using Terraria.DataStructures;
 
 namespace AnimLib.States;
@@ -206,14 +205,6 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
     else {
       // Loop logic
       Play(options);
-    }
-
-    if (AnimDebugCommand.DebugEnabled) {
-      // TODO: replace Main.NewText spam with something better?
-      // Main.NewText($"Frame called: Tile [{MainAnimation.CurrentFrame}], " +
-      //   $"{CurrentTagName}{(Reversed ? " (Reversed)" : "")} " +
-      //   $"Time: {FrameTime}, " +
-      //   $"AnimIndex: {FrameIndex}/{MainAnimation.CurrentTag.Frames.Length}");
     }
   }
 
