@@ -24,6 +24,7 @@ public sealed class AnimPlayer : ModPlayer {
     }
 
     Characters.Initialize();
+    Characters.Enter(null);
     _hasInitialized = true;
     if (Main.dedServ) {
       StatesNet.CreateNetIDs(Characters);
