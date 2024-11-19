@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 
 namespace AnimLib.States;
 
@@ -121,8 +121,8 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
     ActiveTime++;
     OnPreUpdate();
     State? activeChild = ActiveChild;
-    if (activeChild is not null && _interrupts.TryGetValue(activeChild.GetType(), out var list)) {
-      State? interrupt = list.FirstOrDefault(i => i.CanEnter() && i.OnPreUpdateInterruptible(activeChild));
+    if (activeChild is not null && Interrupts.TryGetValue(activeChild.GetType(), out var list)) {
+      State? interrupt = list.FirstOrDefault(i => i.OnPreUpdateInterruptible(activeChild) && i.CanEnter());
       if (interrupt is not null) {
         ActiveChild = interrupt;
         NetUpdate = true;

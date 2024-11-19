@@ -187,8 +187,8 @@ public abstract partial class AnimCharacter : ConcurrentState {
       }
     }
 
-    if (AnimationUpdEnabledCompat && !Main.dedServ) {
-      foreach (AnimatedStateMachine animatedState in Children.OfType<AnimatedStateMachine>()) {
+    if (AnimationUpdEnabledCompat && !Main.dedServ && IsActive) {
+      foreach (AnimatedStateMachine animatedState in ActiveChildren.OfType<AnimatedStateMachine>()) {
         AnimationOptions? options = null;
         try {
           options = animatedState.GetAnimationOptionsInternal();

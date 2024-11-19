@@ -1,4 +1,4 @@
-using AnimLib.Animations;
+﻿using AnimLib.Animations;
 using AnimLib.UI.Debug;
 using Terraria.DataStructures;
 
@@ -294,6 +294,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
     FrameTime = 0;
     Reversed = isReversed ?? tag.IsReversed;
     FrameIndex = Reversed ? tag.Frames.Length - 1 : 0;
+    TimesLooped = 0;
   }
 
   internal void DebugAnimationText(DebugUIState ui) {
