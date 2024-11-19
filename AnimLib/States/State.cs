@@ -29,7 +29,7 @@ public abstract partial class State(Entity entity) {
   /// </summary>
   public CompositeState? Parent { get; internal set; }
 
-  private CompositeState? Root { get; set; }
+  public CompositeState? Root { get; private set; }
 
   /// <summary>
   /// Whether this Entity should be updated locally.
@@ -322,7 +322,7 @@ public abstract partial class State(Entity entity) {
   /// <typeparam name="T">The type of <see cref="Parent"/>.</typeparam>
   /// <returns>The parent of type <typeparamref name="T"/>.</returns>
   /// <exception cref="ArgumentException">No parent is of type <typeparamref name="T"/>.</exception>
-  protected T GetParent<T>() where T : CompositeState =>
+  public T GetParent<T>() where T : CompositeState =>
     GetParents().OfType<T>().FirstOrDefault() ??
     throw new ArgumentException($"No parent is of type {typeof(T).Name}", nameof(T));
 }

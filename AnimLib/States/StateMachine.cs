@@ -179,7 +179,7 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
     return true;
   }
 
-  private void ClearActiveChild(bool silent = false) {
+  protected void ClearActiveChild(bool silent = false) {
     ActiveChild = null;
     if (!silent) {
       NetUpdate = true;
