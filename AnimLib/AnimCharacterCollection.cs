@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using AnimLib.Networking;
 using AnimLib.States;
+using AnimLib.UI.Debug;
 
 namespace AnimLib;
 
@@ -60,6 +61,7 @@ public sealed class AnimCharacterCollection : StateMachine {
     TrySetActiveChild(character);
 
     _characterStack.TryRemove(character);
+    ModContent.GetInstance<DebugUISystem>().TrySetActiveCharacter(this);
   }
 
   /// <summary>
@@ -77,6 +79,10 @@ public sealed class AnimCharacterCollection : StateMachine {
     AnimCharacter? newCharacter = _characterStack.Pop();
     if (newCharacter is not null) {
       Enable(newCharacter);
+    }
+    else {
+      ClearActiveChild();
+      ModContent.GetInstance<DebugUISystem>().TrySetActiveCharacter(this);
     }
   }
 

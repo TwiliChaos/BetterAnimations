@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 
 namespace AnimLib.States;
 
@@ -47,7 +47,7 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
 
   private State? _initialChild;
 
-  private readonly Dictionary<Type, List<State>> _interrupts = [];
+  internal readonly Dictionary<Type, List<State>> Interrupts = [];
 
   /// <summary>
   /// Adds an interruptible from the specified <typeparamref name="TFrom"/>, to the specified <paramref name="to"/>.
@@ -83,8 +83,8 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
       throw new ArgumentException($"State {Name} does not have Child {to} to transition to.", nameof(to));
     }
 
-    if (!_interrupts.TryGetValue(from.GetType(), out var list)) {
-      _interrupts.Add(from.GetType(), [to]);
+    if (!Interrupts.TryGetValue(from.GetType(), out var list)) {
+      Interrupts.Add(from.GetType(), [to]);
       return;
     }
 

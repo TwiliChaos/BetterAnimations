@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using AnimLib.UI.Debug;
+using JetBrains.Annotations;
 
 namespace AnimLib.Commands;
 
@@ -7,14 +8,18 @@ internal class AnimDebugCommand : ModCommand {
   public override string Command => "animdebug";
   public override CommandType Type => CommandType.Chat;
 
+  public static bool DebugEnabled { get; private set; }
 #if DEBUG
-  public static bool DebugEnabled { get; private set; } = true;
-#else
-  public static bool DebugEnabled { get; private set; };
+    = true;
 #endif
 
   public override void Action(CommandCaller caller, string input, string[] args) {
-    DebugEnabled ^= true;
+    ToggleDebugMode();
     caller.Reply($"Set AnimLib debug mode to {DebugEnabled}");
+  }
+
+  internal static void ToggleDebugMode() {
+    DebugEnabled ^= true;
+    ModContent.GetInstance<DebugUISystem>().SetUIVisibility(DebugEnabled);
   }
 }

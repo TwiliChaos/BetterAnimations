@@ -1,6 +1,7 @@
-﻿using System.Linq;
+using System.Linq;
 using AnimLib.Animations;
 using AnimLib.Networking;
+using AnimLib.UI.Debug;
 using Terraria.ID;
 
 namespace AnimLib.States;
@@ -226,6 +227,14 @@ public abstract partial class State(Entity entity) {
   #endregion
 
   public override string ToString() => Name;
+
+  protected internal virtual void DebugHeader(DebugUIState ui, bool redOnInactive = false) {
+    ui.DrawAppendLabelValue("State", Name,
+      IsActive ? DebugUIState.Green : redOnInactive ? DebugUIState.Red : Color.LightGray);
+  }
+
+  protected internal virtual void DebugText(DebugUIState ui) {
+  }
 
   /// <summary>
   /// Whether this state can be transitioned to, from the specified active state.

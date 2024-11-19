@@ -1,7 +1,7 @@
 using System.Linq;
 using AnimLib.Animations;
-using AnimLib.Networking;
 using AnimLib.States;
+using AnimLib.UI.Debug;
 using JetBrains.Annotations;
 using Terraria.ModLoader.IO;
 
@@ -239,5 +239,10 @@ public abstract partial class AnimCharacter : ConcurrentState {
   /// </summary>
   /// <param name="tag"> An instance of <see cref="TagCompound"/> containing <see cref="States.AbilityState"/> save data. </param>
   protected virtual void LoadCustomData(TagCompound tag) {
+  }
+
+  protected internal override void DebugHeader(DebugUIState ui, bool redOnInactive = false) {
+    ui.DrawAppendLabelValue("Character", Name,
+      IsActive ? DebugUIState.Green : redOnInactive ? DebugUIState.Red : Color.LightGray);
   }
 }

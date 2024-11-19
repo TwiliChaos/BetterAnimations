@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using AnimLib.UI.Debug;
 
 namespace AnimLib.States;
 
@@ -43,6 +44,14 @@ public abstract partial class AbilityState(Player player) : State(player) {
   /// <see cref="Unlocked"/> is <see langword="true"/>, and <see cref="IsOnCooldown"/> is <see langword="false"/>.
   /// </summary>
   public override bool CanEnter() => Unlocked && !IsOnCooldown;
+
+  /// <summary>
+  /// Whether this ability uses cooldown features.
+  /// </summary>
+  /// <remarks>
+  /// Currently this is only used in the debug UI.
+  /// </remarks>
+  public virtual bool SupportsCooldown => false;
 
   /// <summary>
   /// The value which <see cref="CooldownLeft"/> will be set to when <see cref="StartCooldown"/> is called.
@@ -98,8 +107,8 @@ public abstract partial class AbilityState(Player player) : State(player) {
     OnStartCooldown();
   }
 
-  public void EndCooldown() {
-    if (!IsOnCooldown) {
+  public void EndCooldown(bool force = false) {
+    if (!force && !IsOnCooldown) {
       return;
     }
 
@@ -155,6 +164,25 @@ public abstract partial class AbilityState(Player player) : State(player) {
     }
 
     base.Exit();
+  }
+
+  protected internal override void DebugText(DebugUIState ui) {
+    base.DebugText(ui);
+    ui.DrawAppendLabelValue("Level", Level, MaxLevel, color: Level > MaxLevel ? Color.Yellow : null);
+    if (IsActive) {
+      ui.DrawAppendLabelValue("Active Time:", ActiveTime);
+    }
+
+    if (MaxCooldown > 0 || IsOnCooldown) {
+      ui.DrawAppendLabelValue("Is Off Cooldown", !IsOnCooldown ? "Yes" : "No",
+        IsOnCooldown ? DebugUIState.Red : DebugUIState.Green);
+      ui.DrawAppendLabelValue("Cooldown", CooldownLeft, MaxCooldown);
+      if (IsOnCooldown && CooldownLeft <= 0) {
+        using (ui.Indent()) {
+          ui.DrawAppendLine("Another condition prevents cooldown.", Color.LightGray);
+        }
+      }
+    }
   }
 
   internal string DebugText() {

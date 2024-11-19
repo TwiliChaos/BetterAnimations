@@ -1,4 +1,5 @@
 using AnimLib.Networking;
+using AnimLib.UI.Debug;
 using JetBrains.Annotations;
 
 namespace AnimLib;
@@ -12,6 +13,10 @@ public sealed class AnimPlayer : ModPlayer {
   private AnimCharacterCollection? _characters;
 
   private bool _hasInitialized;
+
+  public override void OnEnterWorld() {
+    ModContent.GetInstance<DebugUISystem>().SetCharacters(Characters);
+  }
 
   public override void ModifyMaxStats(out StatModifier health, out StatModifier mana) {
     base.ModifyMaxStats(out health, out mana);
