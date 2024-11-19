@@ -9,8 +9,8 @@ namespace AnimLib;
 /// </summary>
 [UsedImplicitly]
 public sealed class AnimPlayer : ModPlayer {
-  internal AnimCharacterCollection Characters => _characters ??= new AnimCharacterCollection(Player);
-  private AnimCharacterCollection? _characters;
+  [field: AllowNull, MaybeNull]
+  internal AnimCharacterCollection Characters => field ??= new AnimCharacterCollection(Player);
 
   private bool _hasInitialized;
 

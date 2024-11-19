@@ -23,12 +23,11 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
   /// <summary>
   /// Current <see cref="AnimTag"/> being played.
   /// </summary>
+  [field: AllowNull, MaybeNull]
   public AnimTag CurrentTag {
-    get => _currentTag ??= SpriteSheet.Tags[0];
-    private set => _currentTag = value;
+    get => field ??= SpriteSheet.Tags[0];
+    private set;
   }
-
-  private AnimTag? _currentTag;
 
   public AnimFrame CurrentFrame => CurrentTag.Frames[FrameIndex];
 

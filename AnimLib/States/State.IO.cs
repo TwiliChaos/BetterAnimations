@@ -12,14 +12,14 @@ public abstract partial class State {
   /// and setting to the value is ignored.
   /// </summary>
   public bool NetUpdate {
-    get => _netUpdate;
+    get;
     protected internal set {
       // Ignore NetUpdate for non-local player
       if (!IsLocal && !Main.dedServ) {
         return;
       }
 
-      _netUpdate = value;
+      field = value;
       if (value) {
         OnNetUpdateNeeded();
 
@@ -44,22 +44,19 @@ public abstract partial class State {
   /// as a consequence of a child <see cref="NetUpdate"/> set to <see langword="true"/>.
   /// </summary>
   internal bool IndirectNetUpdate {
-    get => _indirectNetUpdate;
+    get;
     private set {
       // Ignore NetUpdate for non-local player
       if (!IsLocal && !Main.dedServ) {
         return;
       }
 
-      _indirectNetUpdate = value;
+      field = value;
       if (value && Parent is not null) {
         Parent.IndirectNetUpdate = true;
       }
     }
   }
-
-  private bool _netUpdate;
-  private bool _indirectNetUpdate;
 
   /// <summary>
   /// Syncs <see cref="ActiveTime"/>, and calls the non-internal <see cref="NetSync"/>.

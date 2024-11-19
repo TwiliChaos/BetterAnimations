@@ -28,9 +28,8 @@ public abstract class AbilityProjectile : ModProjectile {
   /// <summary>
   /// The <see cref="Player"/> that this <see cref="AbilityProjectile{T}"/> belongs to.
   /// </summary>
-  protected Player Player => _player ??= Main.player[Projectile.owner];
-
-  private Player? _player;
+  [field: AllowNull, MaybeNull]
+  protected Player Player => field ??= Main.player[Projectile.owner];
 
 
   /// <summary>

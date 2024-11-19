@@ -80,9 +80,9 @@ public abstract partial class AnimCharacter : ConcurrentState {
 
   public AnimCharacterCollection Characters { get; }
 
-  public IEnumerable<AbilityState> AbilityStates => _abilityStates ??= AllChildren.OfType<AbilityState>().ToArray();
+  [field: AllowNull, MaybeNull]
+  public IEnumerable<AbilityState> AbilityStates => field ??= AllChildren.OfType<AbilityState>().ToArray();
 
-  private AbilityState[]? _abilityStates;
   private bool _isEnabled;
 
 

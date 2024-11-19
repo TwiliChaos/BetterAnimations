@@ -18,17 +18,17 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
   /// and <see cref="State.Enter"/> on the new child.
   /// </summary>
   public State? ActiveChild {
-    get => _activeChild;
+    get;
     private set {
-      if (ReferenceEquals(value, _activeChild)) {
+      if (ReferenceEquals(value, field)) {
         return;
       }
 
-      State? lastChild = _activeChild;
+      State? lastChild = field;
 
-      _activeChild?.Exit();
-      _activeChild = value;
-      _activeChild?.Enter(lastChild);
+      field?.Exit();
+      field = value;
+      field?.Enter(lastChild);
     }
   }
 
@@ -42,8 +42,6 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
       }
     }
   }
-
-  private State? _activeChild;
 
   private State? _initialChild;
 
@@ -107,8 +105,8 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
 
   internal sealed override void Enter(State? fromState) {
     ActiveTime = 0;
-    if (_activeChild is null && _initialChild is not null) {
-      _activeChild = _initialChild;
+    if (ActiveChild is null && _initialChild is not null) {
+      ActiveChild = _initialChild;
     }
 
     OnEnter(fromState);

@@ -39,8 +39,7 @@ public abstract partial class CompositeState(Entity entity) : State(entity) {
   /// Concatenation of <see cref="Children"/> and <see cref="NestedChildren"/>
   /// </summary>
   // TODO: Have AllChildren of non-root instead be a span slice of root's AllChildren array?
-  public IEnumerable<State> AllChildren =>
-    !HasChildren ? [] : _allChildren ??= _children.Concat(_nestedChildren).ToArray();
+  public IEnumerable<State> AllChildren => _children.Concat(_nestedChildren);
 
   public int AllChildrenCount => _children.Count + _nestedChildren.Count;
 
@@ -52,10 +51,8 @@ public abstract partial class CompositeState(Entity entity) : State(entity) {
 
   private readonly Dictionary<string, State> _childrenByType = [];
 
-  private State[]? _allChildren;
-
-  private State[] NetChildren => _netChildren ??= CreateNetChildren();
-  private State[]? _netChildren;
+  [field: AllowNull, MaybeNull]
+  private State[] NetChildren => field ??= CreateNetChildren();
 
   /// <summary>
   /// Adds the specified <see cref="State"/> as a child of this instance.
