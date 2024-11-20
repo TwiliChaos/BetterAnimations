@@ -21,7 +21,7 @@ public abstract partial class CompositeState {
       return;
     }
 
-    var netChildren = sync.SyncEnumerate(this, GetNetChildrenCount, GetNetChildren, WriteChildId, ReadChildId);
+    var netChildren = sync.SyncEnumerate(this, GetNetChildrenCount, GetNetUpdateChildren, WriteChildId, ReadChildId);
 
     foreach (State? netUpdateChild in netChildren) {
       netUpdateChild.NetSyncInternal(sync);
@@ -29,17 +29,13 @@ public abstract partial class CompositeState {
 
     return;
 
-    static int GetNetChildrenCount(CompositeState me) => me.GetNetUpdateChildren().Count();
-    static IEnumerable<State> GetNetChildren(CompositeState me) => me.GetNetUpdateChildren();
+    static int GetNetChildrenCount(CompositeState me) => GetNetUpdateChildren(me).Count();
     static void WriteChildId(BinaryWriter writer, State child) => writer.Write(child.NetId);
     static State ReadChildId(CompositeState me, BinaryReader reader) => me.GetChild(reader.ReadInt16());
+
+    static IEnumerable<State> GetNetUpdateChildren(CompositeState me) =>
+      me._children.Where(state => state.NetUpdate || state.IndirectNetUpdate);
   }
-
-  private IEnumerable<State> GetNetUpdateChildren() =>
-    _children.Where(state => state.NetUpdate || state.IndirectNetUpdate);
-
-  private protected int GetAllNetChildrenCount(bool includeIndirect = true) =>
-    GetAllNetChildren(includeIndirect).Count();
 
   private protected IEnumerable<State> GetAllNetChildren(bool includeIndirect) =>
     includeIndirect

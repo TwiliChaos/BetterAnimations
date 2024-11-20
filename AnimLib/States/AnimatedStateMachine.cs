@@ -298,20 +298,21 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
   }
 
   internal void DebugAnimationText(DebugUIState ui) {
+    ui.DrawAppendLabelValue("Aseprite file", SpriteSheetAsset.Name);
     ui.DrawAppendLabelValue("AnimTag", CurrentTag.Name);
-    ui.DrawAppendLabelValue("Frame", FrameIndex + 1, CurrentTag.Frames.Length);
+    ui.DrawAppendLabelValue("Frame", FrameIndex + 1, max:CurrentTag.Frames.Length);
     ui.DrawAppendLabelValue("Frame (Atlas)", CurrentFrame.AtlasFrameIndex);
     ui.DrawAppendLabelValue("Frame Time", FrameTime, format:['F']);
     ui.DrawAppendLabelValue("Frame Duration", CurrentFrame.Duration, format:['F']);
     if (CurrentTag.LoopCount > 0) {
-      ui.DrawAppendLabelValue("Times Looped", TimesLooped, CurrentTag.LoopCount);
+      ui.DrawAppendLabelValue("Times Looped", TimesLooped, max:CurrentTag.LoopCount);
     }
     else {
       ui.DrawAppendLabelValue("Times Looped", TimesLooped);
     }
 
     ui.DrawAppendLabelValue("Sprite Rotation", SpriteRotation);
-    ui.DrawAppendBoolean(Reversed);
+    ui.DrawAppendBoolean(Reversed, color:Color.White);
     ui.DrawAppendLabelValue("Effects", Effects);
   }
 }

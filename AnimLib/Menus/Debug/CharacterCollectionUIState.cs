@@ -50,8 +50,8 @@ public class CharacterCollectionUIState : UIState {
     Append(_abilityUI);
 
     _animatedStateUI = new AnimatedStatesUI();
-    _animatedStateUI.Width.Set(300, 0);
-    _animatedStateUI.Height.Set(250, 0);
+    _animatedStateUI.Width.Set(360, 0);
+    _animatedStateUI.Height.Set(280, 0);
     _animatedStateUI.Top.Set(100 + _activeStateUI.Height.Pixels + 10, 0);
     _animatedStateUI.Left.Set(100, 0);
     AddLockButton(_animatedStateUI);

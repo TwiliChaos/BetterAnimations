@@ -12,6 +12,8 @@ namespace AnimLib.UI.Debug;
 /// <see cref="UIState"/> which supports appending lines of stack-allocated text.
 /// </summary>
 public abstract class DebugUIState : DraggablePanel {
+  private const int MaxStackallocSize = 128;
+
   protected DebugUIState() {
     Width.Set(0, 1);
     Height.Set(30, 0);
@@ -57,6 +59,8 @@ public abstract class DebugUIState : DraggablePanel {
     Append(Header);
   }
 
+  #region DrawAppend Methods
+
   /// <summary>
   /// Draws the specified boolean value, color either the specified color, or green if <paramref name="value"/> is <see langword="true"/>, red if <see langword="false"/>.
   /// The label, if not specified, will be the argument expression for <paramref name="value"/>.
@@ -64,9 +68,9 @@ public abstract class DebugUIState : DraggablePanel {
   /// <param name="value">The boolean value to draw.</param>
   /// <param name="key">The label to draw.</param>
   /// <param name="color">The color for the text. If null, the color will be green if <paramref name="value"/> is <see langword="true"/>, red if <see langword="false"/>.</param>
-  public void DrawAppendBoolean(bool value, [CallerArgumentExpression(nameof(value))] string? key = null,
+  public void DrawAppendBoolean(bool value, [CallerArgumentExpression(nameof(value))] string key = default!,
     Color? color = null) {
-    DrawAppendLabelValue(key, value.ToString(), color ?? (value ? Green : Red));
+    DrawAppendLabelValue(key, value.ToString().AsSpan(), color ?? (value ? Green : Red));
   }
 
   /// <summary>
@@ -82,16 +86,11 @@ public abstract class DebugUIState : DraggablePanel {
   /// <typeparam name="T">Type that implements <see cref="ISpanFormattable"/>, where <see cref="ISpanFormattable.TryFormat"/> is used for the value.</typeparam>
   public void DrawAppendLabelValue<T>(string label, T value, T max, Color? color = null,
     ReadOnlySpan<char> format = default, IFormatProvider? provider = null) where T : ISpanFormattable {
-    StackString str = new(stackalloc char[32]);
+    StackString str = new(stackalloc char[MaxStackallocSize]);
     str.Append(value, format, provider);
     str.Append(" / ");
     str.Append(max, format, provider);
-    if (!str.ExceededCapacity) {
-      DrawAppendLabelValue(label, str.AsReadOnlySpan(), color);
-    }
-    else {
-      DrawAppendLabelValue(label, "...", color);
-    }
+    DrawAppendLabelValue(label, !str.ExceededCapacity ? str.AsReadOnlySpan() : "...".AsSpan(), color);
   }
 
   /// <summary>
@@ -104,11 +103,10 @@ public abstract class DebugUIState : DraggablePanel {
   /// <param name="format">A span containing the characters that represent a standard or custom format string that defines the acceptable format.</param>
   /// <param name="provider">An optional object that supplies culture-specific formatting information.</param>
   /// <typeparam name="T">Type that implements <see cref="ISpanFormattable"/>, where <see cref="ISpanFormattable.TryFormat"/> is used for the value.</typeparam>
-  public void DrawAppendLabelValue<T>(T value, [CallerArgumentExpression(nameof(value))] string? label = null,
+  public void DrawAppendLabelValue<T>(T value, [CallerArgumentExpression(nameof(value))] string label = default!,
     Color? color = null, ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
-    where T : ISpanFormattable {
+    where T : ISpanFormattable =>
     DrawAppendLabelValue(label, value, color, format, provider);
-  }
 
   /// <summary>
   /// Draws the specified text, as a label-value pair, and increases the Y position by <see cref="YOffset"/>.
@@ -119,17 +117,14 @@ public abstract class DebugUIState : DraggablePanel {
   /// <param name="format">A span containing the characters that represent a standard or custom format string that defines the acceptable format.</param>
   /// <param name="provider">An optional object that supplies culture-specific formatting information.</param>
   /// <typeparam name="T">Type that implements <see cref="ISpanFormattable"/>, where <see cref="ISpanFormattable.TryFormat"/> is used for the value.</typeparam>
-  public void DrawAppendLabelValue<T>(ReadOnlySpan<char> label, T value, Color? color = null,
+  public void DrawAppendLabelValue<T>(string label, T value, Color? color = null,
     ReadOnlySpan<char> format = default, IFormatProvider? provider = null)
     where T : ISpanFormattable {
-    StackString str = new(stackalloc char[64]);
-    str.Append(value, format, provider);
-    if (!str.ExceededCapacity) {
-      DrawAppendLabelValue(label, str.AsReadOnlySpan(), color);
-    }
-    else {
-      DrawAppendLabelValue(label, "...", color);
-    }
+    Span<char> buffer = stackalloc char[MaxStackallocSize];
+    var result = value.TryFormat(buffer, out int charsWritten, format, provider)
+      ? buffer[..charsWritten]
+      : "...".AsSpan();
+    DrawAppendLabelValue(label, result, color);
   }
 
   /// <summary>
@@ -139,10 +134,8 @@ public abstract class DebugUIState : DraggablePanel {
   /// <param name="label">The label to draw.</param>
   /// <param name="value">The value to draw.</param>
   /// <param name="color">The color for the text.</param>
-  public void DrawAppendLabelValue(ReadOnlySpan<char> label, string? value, Color? color = null) {
-    value ??= "null";
-    DrawAppendLabelValue(label, value.AsSpan(), color);
-  }
+  public void DrawAppendLabelValue(string label, string? value, Color? color = null) =>
+    DrawAppendLabelValue(label, (value ?? "null").AsSpan(), color);
 
   /// <summary>
   /// Draws the specified text, as a label-value pair, and increases the Y position by <see cref="YOffset"/>.
@@ -150,10 +143,17 @@ public abstract class DebugUIState : DraggablePanel {
   /// <param name="label">The label to draw.</param>
   /// <param name="value">The value to draw.</param>
   /// <param name="color">The color for the text.</param>
-  public void DrawAppendLabelValue(ReadOnlySpan<char> label, ReadOnlySpan<char> value, Color? color = null,
-    Vector2? scale = null) {
-    DrawLabelValue(label, value, color, scale);
-    TextPosition.Y += YOffset * (scale ?? Vector2.One).Y;
+  private void DrawAppendLabelValue(string label, ReadOnlySpan<char> value, Color? color = null) {
+    if (_spriteBatch is null) {
+      throw new InvalidOperationException("Method must be called during Draw.");
+    }
+
+    color ??= Color;
+    _spriteBatch.DrawString(FontAssets.MouseText.Value, (ReadOnlySpan<char>)label, TextPosition, color.Value);
+    TextPosition.X += XOffset;
+    _spriteBatch.DrawString(FontAssets.MouseText.Value, value, TextPosition, color.Value);
+    TextPosition.X -= XOffset;
+    TextPosition.Y += YOffset;
   }
 
   /// <summary>
@@ -162,29 +162,16 @@ public abstract class DebugUIState : DraggablePanel {
   /// <param name="text">The line of text to draw.</param>
   /// <param name="color">The color for the text.</param>
   /// <exception cref="InvalidOperationException"></exception>
-  public void DrawAppendLine(ReadOnlySpan<char> text, Color? color = null, Vector2? scale = null) {
+  public void DrawAppendLine(ReadOnlySpan<char> text, Color? color = null) {
     if (_spriteBatch is null) {
       throw new InvalidOperationException("Method must be called during Draw.");
     }
 
     _spriteBatch.DrawString(FontAssets.MouseText.Value, text, TextPosition, color ?? Color);
-    TextPosition.Y += YOffset * (scale ?? Vector2.One).Y;
+    TextPosition.Y += YOffset;
   }
 
-  private void DrawLabelValue(ReadOnlySpan<char> key, ReadOnlySpan<char> value, Color? color = null,
-    Vector2? scale = null) {
-    if (_spriteBatch is null) {
-      throw new InvalidOperationException("Method must be called during Draw.");
-    }
-
-    color ??= Color;
-    _spriteBatch.DrawString(FontAssets.MouseText.Value, key, TextPosition, color.Value);
-    TextPosition.X += XOffset;
-    _spriteBatch.DrawString(FontAssets.MouseText.Value, value, TextPosition, color.Value);
-    TextPosition.X -= XOffset;
-  }
-
-  protected void DrawText(ReadOnlySpan<char> value, Color? color = null, Vector2? scale = null) {
+  protected void DrawText(ReadOnlySpan<char> value, Color? color = null) {
     if (_spriteBatch is null) {
       throw new InvalidOperationException("Method must be called during Draw.");
     }
@@ -194,12 +181,15 @@ public abstract class DebugUIState : DraggablePanel {
   }
 
   protected void DrawText<T>(T value, Color? color = null, ReadOnlySpan<char> format = default,
-    IFormatProvider? provider = null)
-    where T : ISpanFormattable {
-    StackString str = new(stackalloc char[32]);
-    str.Append(value, format, provider);
-    DrawText(str.AsReadOnlySpan(), color);
+    IFormatProvider? provider = null) where T : ISpanFormattable {
+    Span<char> buffer = stackalloc char[MaxStackallocSize];
+    var result = value.TryFormat(buffer, out int charsWritten, format, provider)
+      ? buffer[..charsWritten]
+      : "...".AsSpan();
+    DrawText(result, color);
   }
+
+  #endregion
 
   public override void Draw(SpriteBatch spriteBatch) {
     TextPosition = GetInnerDimensions().Position() + new Vector2(Parent.PaddingLeft, Parent.PaddingTop);

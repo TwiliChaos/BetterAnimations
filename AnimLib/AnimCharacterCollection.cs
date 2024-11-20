@@ -128,7 +128,7 @@ public sealed class AnimCharacterCollection : StateMachine {
   private bool TryWriteSingleUpdate(IWriteSync write) {
     BinaryWriter writer = write.Writer;
 
-    int netCount = GetAllNetChildrenCount(includeIndirect: false);
+    int netCount = GetAllNetChildren(includeIndirect: false).Count();
 
     bool hasSingleUpdate = netCount == 1;
     writer.Write(!hasSingleUpdate);
