@@ -47,11 +47,12 @@ public abstract partial class AbilityState(Player player) : State(player) {
 
   /// <summary>
   /// Whether this ability uses cooldown features.
+  /// By default, returns <see langword="true"/> if <see cref="MaxCooldown"/> is greater than 0.
   /// </summary>
   /// <remarks>
   /// Currently this is only used in the debug UI.
   /// </remarks>
-  public virtual bool SupportsCooldown => false;
+  public virtual bool SupportsCooldown => MaxCooldown > 0;
 
   /// <summary>
   /// The value which <see cref="CooldownLeft"/> will be set to when <see cref="StartCooldown"/> is called.
