@@ -61,4 +61,8 @@ public sealed class AnimPlayer : ModPlayer {
   public override void PostUpdate() {
     Characters.PostUpdate();
   }
+
+  public override void FrameEffects() {
+    Characters.UpdateAnimations();
+  }
 }

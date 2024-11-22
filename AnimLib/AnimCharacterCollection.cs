@@ -18,6 +18,8 @@ public sealed class AnimCharacterCollection : StateMachine {
 
   private readonly CharacterStack _characterStack = new();
 
+  private TimeSpan _lastAnimationUpdate;
+
   internal bool TryAddCharacter(AnimCharacter character) {
     if (ChildrenByType.ContainsKey(character.GetType().Name)) {
       return false;
@@ -83,6 +85,15 @@ public sealed class AnimCharacterCollection : StateMachine {
     else {
       ClearActiveChild();
       ModContent.GetInstance<DebugUISystem>().TrySetActiveCharacter(this);
+    }
+  }
+
+  internal void UpdateAnimations() {
+    TimeSpan currentTime = Main.gameTimeCache.TotalGameTime;
+    float delta = (float)(currentTime - _lastAnimationUpdate).TotalSeconds;
+    _lastAnimationUpdate = currentTime;
+    if (delta > 0) {
+      ActiveCharacter?.UpdateAnimations(delta);
     }
   }
 

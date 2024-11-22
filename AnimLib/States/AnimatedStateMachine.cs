@@ -172,7 +172,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
   /// </summary>
   /// <param name="options"></param>
   /// <exception cref="ArgumentException"></exception>
-  internal void UpdateAnimation(AnimationOptions options) {
+  internal void UpdateAnimation(AnimationOptions options, float delta) {
     ArgumentException.ThrowIfNullOrWhiteSpace(options.TagName);
 
     if (!SpriteSheet.TryGetTag(options.TagName, out AnimTag? tag)) {
@@ -204,7 +204,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
     }
     else {
       // Loop logic
-      Play(options);
+      Play(options, delta);
     }
   }
 
@@ -219,8 +219,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
   /// <see cref="AnimTag.IsPingPong">AnimTag.IsPingPong</see> is <see langword="true"/>.
   /// </summary>
   /// <param name="options"></param>
-  private void Play(AnimationOptions options) {
-    const float delta = 1f / 60f; // TODO: High FPS Support
+  private void Play(AnimationOptions options, float delta) {
     float duration = CurrentFrame.Duration;
     float newFrameTime = FrameTime + options.Speed * delta;
 

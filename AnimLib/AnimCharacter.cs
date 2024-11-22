@@ -187,26 +187,30 @@ public abstract partial class AnimCharacter : ConcurrentState {
       }
     }
 
-    if (AnimationUpdEnabledCompat && !Main.dedServ && IsActive) {
-      foreach (AnimatedStateMachine animatedState in ActiveChildren.OfType<AnimatedStateMachine>()) {
-        AnimationOptions? options = null;
-        try {
-          options = animatedState.GetAnimationOptionsInternal();
-        }
-        catch (Exception ex) {
-          Log.Error($"[{animatedState}]: Caught exception.", ex);
-          Main.NewText(
-            $"AnimLib -> {animatedState}: Caught exception while updating animations. See client.log for more information.",
-            Color.Red);
-        }
+    UpdateConditionsPost();
+  }
 
-        if (options is not null) {
-          animatedState.UpdateAnimation(options.Value);
-        }
-      }
+  internal void UpdateAnimations(float delta) {
+    if (!AnimationUpdEnabledCompat || Main.dedServ || !IsActive) {
+      return;
     }
 
-    UpdateConditionsPost();
+    foreach (AnimatedStateMachine animatedState in ActiveChildren.OfType<AnimatedStateMachine>()) {
+      AnimationOptions? options = null;
+      try {
+        options = animatedState.GetAnimationOptionsInternal();
+      }
+      catch (Exception ex) {
+        Log.Error($"[{animatedState}]: Caught exception.", ex);
+        Main.NewText(
+          $"AnimLib -> {animatedState}: Caught exception while updating animations. See client.log for more information.",
+          Color.Red);
+      }
+
+      if (options is not null) {
+        animatedState.UpdateAnimation(options.Value, delta);
+      }
+    }
   }
 
   /// <summary>
