@@ -1,5 +1,6 @@
 using System.IO;
 using AnimLib.Networking;
+using AnimLib.UI.Debug;
 using JetBrains.Annotations;
 using Terraria.ID;
 
@@ -25,6 +26,8 @@ public sealed partial class AnimLibMod : Mod {
   /// </summary>
   public static string GithubProjectName => "AnimLib";
 
+  public static bool DebugEnabled { get; set; }
+
   public override void HandlePacket(BinaryReader reader, int whoAmI) {
     if (Main.netMode == NetmodeID.MultiplayerClient) {
       // If packet is sent TO server, it is FROM player.
@@ -35,5 +38,10 @@ public sealed partial class AnimLibMod : Mod {
     }
 
     ModContent.GetInstance<ModNetHandler>().HandlePacket(reader, whoAmI);
+  }
+
+  internal static void ToggleDebugMode() {
+    DebugEnabled ^= true;
+    ModContent.GetInstance<DebugUISystem>().SetUIVisibility(DebugEnabled);
   }
 }

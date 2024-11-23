@@ -27,7 +27,7 @@ internal class AnimAbilityCommand : ModCommand {
   }
 
   private static Message Action(CommandCaller caller, IReadOnlyList<string> args) {
-    if (!AnimDebugCommand.DebugEnabled) {
+    if (!AnimLibMod.DebugEnabled) {
       return Error("This command cannot be used outside of debug mode.");
     }
 

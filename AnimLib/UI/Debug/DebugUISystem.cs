@@ -34,7 +34,7 @@ public sealed class DebugUISystem : ModSystem {
     _ui = new CharacterCollectionUIState();
     _ui.Activate();
     _uiInterface = new UserInterface();
-    _uiInterface.SetState(AnimDebugCommand.DebugEnabled ? _ui : null);
+    _uiInterface.SetState(AnimLibMod.DebugEnabled ? _ui : null);
     _debugAnimationLayer = new LegacyGameInterfaceLayer(
       "AnimLib: Debug Animation",
       delegate {

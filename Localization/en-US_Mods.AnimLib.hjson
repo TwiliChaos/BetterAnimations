@@ -1,1 +1,15 @@
+Configs: {
+	AnimLibConfig: {
+		DisplayName: AnimLib Config
 
+		DebugModeOnStart: {
+			Label: Debug Mode On Start
+			Tooltip: Whether debug mode should be enabled when this mod is loaded.
+		}
+
+		DebugModeEnabled: {
+			Label: Debug Mode Enabled
+			Tooltip: Enable debug mode. Displays debug information about current character and animations.
+		}
+	}
+}
