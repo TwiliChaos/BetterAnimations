@@ -40,6 +40,10 @@ public sealed partial class AnimLibMod : Mod {
     ModContent.GetInstance<ModNetHandler>().HandlePacket(reader, whoAmI);
   }
 
+  public override void Unload() {
+    UnloadAse();
+  }
+
   internal static void ToggleDebugMode() {
     DebugEnabled ^= true;
     ModContent.GetInstance<DebugUISystem>().SetUIVisibility(DebugEnabled);

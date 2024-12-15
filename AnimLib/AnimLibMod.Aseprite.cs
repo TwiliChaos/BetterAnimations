@@ -22,15 +22,10 @@ public sealed partial class AnimLibMod {
   /// unless this <see cref="AseReader"/>, or a derivative of it, is added to tML proper.
   /// </remarks>
   public override IContentSource CreateDefaultContentSource() {
+    AseReader.AddDefaultProcessors();
     GetAssetReaderCollection()?.RegisterReader(new AseReader(), ".ase", ".aseprite");
     return base.CreateDefaultContentSource();
   }
-
-  /// <summary>
-  /// Contains all Texture2D Assets that were generated during
-  /// <see cref="AnimLib.Animations.Aseprite.Processors.AnimSpriteSheetProcessor"/>
-  /// </summary>
-  public readonly AssetRepository AseAssets = new(GetAssetReaderCollection());
 
   private static AssetReaderCollection? GetAssetReaderCollection() =>
     Main.instance.Services.Get<AssetReaderCollection>();
@@ -39,13 +34,14 @@ public sealed partial class AnimLibMod {
   /// Converts the provided Aseprite <see cref="AsepriteDotNet.Texture"/> to an XNA <see cref="Texture2D"/>.
   /// </summary>
   /// <param name="aseTexture"></param>
-  /// <param name="name"></param>
+  /// <param name="mode"></param>
   /// <returns>A tModLoader <see cref="Asset{T}"/> of a <see cref="Texture2D"/></returns>
   /// <remarks>
   /// From the Texture, this method creates a stream that represents a "rawimg"
   /// so that <see cref="Terraria.ModLoader.Assets.RawImgReader"/> can read it to a <see cref="Texture2D"/> for us.
   /// </remarks>
-  internal Asset<Texture2D> AseTextureToTexture2DAsset(Texture aseTexture, string name) {
+  internal Asset<Texture2D> AseTextureToTexture2DAsset(Texture aseTexture,
+    AssetRequestMode mode = AssetRequestMode.AsyncLoad) {
     // We do not use "using" here, the reader will close the stream once it creates the Texture2D.
     // Closed in ImageIO.ReadRaw()
     MemoryStream stream = new();
@@ -63,12 +59,11 @@ public sealed partial class AnimLibMod {
       stream.Position = 0;
     }
 
-    string filename = name + ".rawimg";
-    return AseAssets.CreateUntracked<Texture2D>(stream, filename, AssetRequestMode.AsyncLoad);
+    string filename = aseTexture.Name + ".rawimg";
+    return Assets.CreateUntracked<Texture2D>(stream, filename, mode);
   }
 
-  /// <inheritdoc/>
-  public override void Unload() {
+  public static void UnloadAse() {
     // Method exists just to remove our AseReader which was registered in CreateDefaultContentSource()
 
     const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -83,11 +78,9 @@ public sealed partial class AnimLibMod {
       .GetField("_readersByExtension", flags)!
       .GetValue(collection)!;
 
-    readers.Remove(".ase");
-    readers.Remove(".aseprite");
-
-    string[] extensions = readers.Keys.ToArray();
-    type.GetField("_extensions", flags)!
-      .SetValue(collection, extensions);
+    if (readers.Remove(".ase") || readers.Remove(".aseprite")) {
+      type.GetField("_extensions", flags)!
+        .SetValue(collection, readers.Keys.ToArray());
+    }
   }
 }

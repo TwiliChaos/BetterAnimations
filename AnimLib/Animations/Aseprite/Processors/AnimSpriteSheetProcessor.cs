@@ -8,7 +8,7 @@ namespace AnimLib.Animations.Aseprite.Processors;
 /// <summary>
 /// Defines a processor for processing an <see cref="AnimLibMod"/> <see cref="AnimSpriteSheet"/> from an <see cref="AsepriteFile"/>.
 /// </summary>
-public static class AnimSpriteSheetProcessor {
+public class AnimSpriteSheetProcessor : IAsepriteProcessor<AnimSpriteSheet> {
   /// <summary>
   /// Processes an <see cref="AnimLibMod"/> <see cref="AnimSpriteSheet"/>
   /// </summary>
@@ -16,10 +16,20 @@ public static class AnimSpriteSheetProcessor {
   /// <param name="options">Optional <see cref="ProcessorOptions"/> used in processing the <see cref="AsepriteFile"/>.</param>
   /// <returns></returns>
   /// <exception cref="InvalidOperationException"></exception>
-  public static AnimSpriteSheet Process(AsepriteFile file, ProcessorOptions? options = null) {
+  public AnimSpriteSheet Process(AsepriteFile file, ProcessorOptions? options = null) {
     ArgumentNullException.ThrowIfNull(file, nameof(file));
     options ??= ProcessorOptions.Default;
 
+    var tags = GetTags(file);
+
+    var textureAtlases = AnimTextureAtlasProcessor.Process(file, options);
+
+    var pointDict = ProcessPoints(file);
+
+    return new AnimSpriteSheet(textureAtlases, tags, pointDict);
+  }
+
+  private static AnimTag[] GetTags(AsepriteFile file) {
     var fileTags = file.Tags;
 
     var tags = new AnimTag[fileTags.Length];
@@ -41,14 +51,10 @@ public static class AnimSpriteSheetProcessor {
       tags[i] = AnimTag.FromAse(SpriteSheetProcessor.ProcessTag(aseTag, file.Frames));
     }
 
-    var textureAtlases = AnimTextureAtlasProcessor.Process(file, options);
-
-    var pointDict = ProcessPoints(file, options);
-
-    return new AnimSpriteSheet(textureAtlases, tags, pointDict);
+    return tags;
   }
 
-  private static Dictionary<string, Vector2[]> ProcessPoints(AsepriteFile file, ProcessorOptions options) {
+  private static Dictionary<string, Vector2[]> ProcessPoints(AsepriteFile file) {
     Dictionary<string, Vector2[]> result = [];
 
     float scale = file.UserData.HasText && file.UserData.Text.Contains("upscale") ? 2 : 1;

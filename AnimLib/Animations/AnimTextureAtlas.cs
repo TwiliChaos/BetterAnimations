@@ -9,24 +9,17 @@ namespace AnimLib.Animations;
 /// </summary>
 [PublicAPI]
 public record AnimTextureAtlas {
-  public AnimTextureAtlas(Rectangle[] _regions, Asset<Texture2D> _textureAsset) {
-    ArgumentNullException.ThrowIfNull(_regions);
-    ArgumentNullException.ThrowIfNull(_textureAsset);
+  public AnimTextureAtlas(Rectangle[] regions, Asset<Texture2D> textureAsset) {
+    ArgumentNullException.ThrowIfNull(regions);
+    ArgumentNullException.ThrowIfNull(textureAsset);
 
-    this._regions = _regions;
-    this._textureAsset = _textureAsset;
-
-    _texture = _textureAsset.IsLoaded
-      ? new Lazy<Texture2D>(_textureAsset.Value)
-      : new Lazy<Texture2D>(() => {
-        _textureAsset.Wait();
-        return _textureAsset.Value;
-      });
+    _regions = regions;
+    TextureAsset = textureAsset;
   }
 
   private readonly Rectangle[] _regions;
-  private readonly Asset<Texture2D> _textureAsset;
-  private readonly Lazy<Texture2D> _texture;
+
+  public readonly Asset<Texture2D> TextureAsset;
 
   /// <summary>
   /// A <see cref="ReadOnlySpan{T}"/> that contains all the <see cref="Rectangle"/>s of the animation.
@@ -41,7 +34,12 @@ public record AnimTextureAtlas {
   /// <summary>
   /// The <see cref="Texture2D"/> of this Texture Atlas.
   /// </summary>
-  public Texture2D GetTexture() => _texture.Value;
+  public Texture2D GetTexture() {
+    if (!TextureAsset.IsLoaded) {
+      TextureAsset.Wait();
+    }
+    return TextureAsset.Value;
+  }
 
   /// <summary>
   /// Gets a <see cref="Rectangle"/> at the frame of the provided <paramref name="index"/>.
@@ -76,6 +74,7 @@ public record AnimTextureAtlas {
     if (start < 0) {
       throw new ArgumentOutOfRangeException(nameof(tag), "The start of the tag is negative.");
     }
+
     if (start + frames.Length > _regions.Length) {
       throw new ArgumentOutOfRangeException(nameof(tag), "The end of the tag exceeded this Atlas's region count.");
     }

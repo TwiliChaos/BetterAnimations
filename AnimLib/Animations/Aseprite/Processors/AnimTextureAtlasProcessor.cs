@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Linq;
+﻿using System.Linq;
 using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
@@ -29,9 +28,8 @@ public static class AnimTextureAtlasProcessor {
   /// </param>
   /// <returns>A Dictionary of root-level layers where each key is the layer name and the value is a flattened representation of that layer.</returns>
   /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null"/>.</exception>
-  public static Dictionary<string, AnimTextureAtlas> Process(AsepriteFile file, ProcessorOptions? options = null) {
+  public static Dictionary<string, AnimTextureAtlas> Process(AsepriteFile file, ProcessorOptions options) {
     ArgumentNullException.ThrowIfNull(file);
-    options ??= ProcessorOptions.Default;
 
     var allFrames = GetAllFrames(file, options);
 
@@ -43,11 +41,11 @@ public static class AnimTextureAtlasProcessor {
   private static LayerEntry[] GetAllFrames(AsepriteFile file, ProcessorOptions options) {
     // We want to know what all the valid root layers are
     // These are layers that do not have a parent, and any children will be flattened into them
-    var rootLayers = GetRootLayers(file, options, out string[] names);
+    var rootLayers = GetRootLayers(file.Layers, options, out string[] names);
 
     int frameCount = file.Frames.Length;
     var allFrames = new LayerEntry[rootLayers.Length];
-    for (int i = 0; i < rootLayers.Length; i++) {
+    for (int i = 0; i < allFrames.Length; i++) {
       allFrames[i] = new LayerEntry(names[i], new FrameEntry[frameCount]);
     }
 
@@ -63,12 +61,27 @@ public static class AnimTextureAtlasProcessor {
     return allFrames;
   }
 
-  private static AsepriteLayer[] GetRootLayers(AsepriteFile file, ProcessorOptions options, out string[] names) {
-    var rootLayers = new List<AsepriteLayer>(file.Layers.Length);
+  /// <summary>
+  /// A "root layer" is a layer which will represent a single texture atlas after processing.
+  /// In the case of group layers, eligible children will be flattened into the root layer.
+  /// </summary>
+  /// <param name="layers">
+  /// All the layers in the <see cref="AsepriteFile"/>.
+  /// </param>
+  /// <param name="options">
+  /// Options to determine whether a layer will be skipped.
+  /// </param>
+  /// <param name="names">
+  /// List of layer names representing the resulting root layers.
+  /// Unlike <see cref="AsepriteLayer.Name"/>, a name represents the full path of the layer.
+  /// </param>
+  /// <returns></returns>
+  private static AsepriteLayer[] GetRootLayers(ReadOnlySpan<AsepriteLayer> layers, ProcessorOptions options, out string[] names) {
+    var rootLayers = new List<AsepriteLayer>(layers.Length);
     var namesList = new List<string>(rootLayers.Capacity);
 
-    for (int i = 0; i < file.Layers.Length; i++) {
-      AsepriteLayer layer = file.Layers[i];
+    for (int i = 0; i < layers.Length; i++) {
+      AsepriteLayer layer = layers[i];
       AsepriteUserData userData = layer.UserData;
       if (userData.HasColor && (
             userData.Color == UserDataColors.Red ||
@@ -112,7 +125,7 @@ public static class AnimTextureAtlasProcessor {
 
         if (isValid) {
           rootLayers.Add(layer);
-          namesList.Add(ProcessorHelper.GetNestedLayerName(file.Layers, i));
+          namesList.Add(ProcessorHelper.GetNestedLayerName(layers, i));
         }
 
         continue;
@@ -122,7 +135,7 @@ public static class AnimTextureAtlasProcessor {
         // Consider any layer that has Green userdata as a root layer, regardless of any other settings
         // Some layers we want imported but not visible while working on them in Aseprite
         rootLayers.Add(layer);
-        namesList.Add(ProcessorHelper.GetNestedLayerName(file.Layers, i));
+        namesList.Add(ProcessorHelper.GetNestedLayerName(layers, i));
         continue;
       }
 
@@ -220,9 +233,8 @@ public static class AnimTextureAtlasProcessor {
       }
 
       Texture aseTexture = new(name, imageSize, imagePixels);
-      var texture = AnimLibMod.Instance?.AseTextureToTexture2DAsset(aseTexture, name)
-        ?? throw new UnreachableException($"{nameof(AnimLibMod)} Instance should not be null.");
-      AnimTextureAtlas atlas = new(regions, texture);
+      var textureAsset = AnimLibMod.Instance.AseTextureToTexture2DAsset(aseTexture);
+      AnimTextureAtlas atlas = new(regions, textureAsset);
       atlasData.Add(name, atlas);
     }
 
@@ -269,7 +281,11 @@ public static class AnimTextureAtlasProcessor {
     }
 
     var firstData = firstFrame.ColorData!;
-    var secondData = secondFrame.ColorData;
+    var secondData = secondFrame.ColorData!;
+
+    if (firstData.Length != secondData.Length) {
+      return false;
+    }
 
     // Attempt early terminations by comparing sparse individual pixels of the texture
     // Equality is very slow otherwise
@@ -295,8 +311,7 @@ public static class AnimTextureAtlasProcessor {
     }
   }
 
-  private static void WriteScaledPixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels,
-    int x, int y, int w) {
+  private static void WriteScaledPixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w) {
     int length = pixels.Length;
     for (int p = 0; p < length; p++) {
       int p2 = p * 2;
