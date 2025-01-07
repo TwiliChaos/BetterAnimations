@@ -69,9 +69,12 @@ public class DraggablePanel : UIPanel {
     }
 
     // Here we check if the DraggableUIPanel is outside the Parent UIElement rectangle
-    // (In our example, the parent would be ExampleCoinsUI, a UIState. This means that we are checking that the DraggableUIPanel is outside the whole screen)
     // By doing this and some simple math, we can snap the panel back on screen if the user resizes his window or otherwise changes resolution
+    // AL: Modified from example to allow no more than 1/4 of the panel to be outside the parent
     Rectangle parentSpace = Parent.GetDimensions().ToRectangle();
+    int maxW = (int)Math.Min(Width.Pixels / 4, 100);
+    int maxH = (int)Math.Min(Height.Pixels / 4, 100);
+    parentSpace.Inflate(-maxW, -maxH);
     if (GetDimensions().ToRectangle().Intersects(parentSpace)) {
       return;
     }
