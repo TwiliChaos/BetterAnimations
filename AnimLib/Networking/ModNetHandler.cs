@@ -8,17 +8,11 @@ namespace AnimLib.Networking;
 /// </summary>
 [UsedImplicitly]
 internal class ModNetHandler : ModSystem {
-  /// <summary> Identifier for <see cref="StateIDsPacketHandler"/>. </summary>
-  private const byte SyncIDs = 1;
-
   /// <summary> Identifier for <see cref="StatePacketHandler"/>. </summary>
-  private const byte SyncStates = 2;
+  private const byte SyncStates = 1;
 
   /// <summary> Identifier for <see cref="FullSyncPacketHandler"/> </summary>
-  private const byte FullSyncStates = 3;
-
-  /// <inheritdoc cref="StateIDsPacketHandler"/>
-  internal readonly StateIDsPacketHandler StateIDsHandler = new(SyncIDs);
+  private const byte FullSyncStates = 2;
 
   /// <inheritdoc cref="StatePacketHandler"/>
   internal readonly StatePacketHandler StatePacketHandler = new(SyncStates);
@@ -34,7 +28,6 @@ internal class ModNetHandler : ModSystem {
   internal void HandlePacket(BinaryReader reader, int fromWho) {
     byte packetClass = reader.ReadByte();
     PacketHandler? handler = packetClass switch {
-      SyncIDs => StateIDsHandler,
       SyncStates => StatePacketHandler,
       FullSyncStates => FullSyncHandler,
       _ => null

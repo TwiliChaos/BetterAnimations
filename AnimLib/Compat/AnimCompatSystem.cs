@@ -29,23 +29,14 @@ public abstract class AnimCompatSystem : ModSystem {
   /// blacklisted in player's character controllers
   /// </summary>
   public bool IsBlockListed(Player player) =>
-    IsBlockListed(player.GetModPlayer<AnimPlayer>());
-
-  /// <summary>
-  /// Checks that this compat system is not
-  /// blacklisted in AnimPlayer's character controllers
-  /// </summary>
-  public bool IsBlockListed(AnimPlayer player) {
-    AnimCharacter? character = player.Characters.ActiveCharacter;
-    return character?.AnimCompatSystemBlocklist.Contains(Name) ?? false;
-  }
+    player.GetActiveCharacter()?.AnimCompatSystemBlocklist.Contains(Name) ?? false;
 
   /// <summary>
   /// Returns wrapped predicate
   /// for safe operation
   /// (prevents running when is not allowed and throwing exceptions outside)
   /// </summary>
-  public Predicate<Player> GetStandardPredicate(Predicate<Player> predicate) => player => {
+  protected Func<Player, bool> GetStandardPredicate(Func<Player, bool> predicate) => player => {
     if (!IsAllowed(player)) return false;
     try {
       return predicate(player);

@@ -10,13 +10,13 @@ public class GlobalCompatConditions : ModSystem {
   /// should be disabled, contains conditions, if any return true,
   /// associated flag is turned to false, if none - to true
   /// </summary>
-  private static readonly List<Predicate<Player>> DisableGraphicsOrPredicates = [];
+  private static readonly List<Func<Player, bool>> DisableGraphicsOrPredicates = [];
 
   /// <summary>
   /// The <see cref="Predicate{Player}"/> list to determine if
   /// animations updates should be disabled
   /// </summary>
-  private static readonly List<Predicate<Player>> DisableAnimationsUpdating = [];
+  private static readonly List<Func<Player, bool>> DisableAnimationsUpdating = [];
 
   /// <summary>
   /// Evaluates conditions of <see cref="DisableGraphicsOrPredicates"/>
@@ -44,7 +44,7 @@ public class GlobalCompatConditions : ModSystem {
   /// (hiding vanilla layers and displaying game character)
   /// (as example, morph ball from NetroidMod should hide players' character)
   /// </summary>
-  public static void AddGraphicsDisableCondition(Predicate<Player> p) =>
+  public static void AddGraphicsDisableCondition(Func<Player, bool> p) =>
     DisableGraphicsOrPredicates.Add(p);
 
   /// <summary>
@@ -57,7 +57,7 @@ public class GlobalCompatConditions : ModSystem {
   /// Use this for compatibility, if you want to add trigger for
   /// disabling of animation updating
   /// </summary>
-  public static void AddAnimationUpdateDisableCondition(Predicate<Player> p) =>
+  public static void AddAnimationUpdateDisableCondition(Func<Player, bool> p) =>
     DisableAnimationsUpdating.Add(p);
 
   public override void Unload() {

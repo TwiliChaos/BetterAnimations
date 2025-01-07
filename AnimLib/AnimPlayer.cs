@@ -1,6 +1,9 @@
+using System.Linq;
 using AnimLib.Networking;
-using AnimLib.UI.Debug;
+using AnimLib.States;
+using AnimLib.Systems;
 using JetBrains.Annotations;
+using Terraria.ModLoader.IO;
 
 namespace AnimLib;
 
@@ -9,37 +12,42 @@ namespace AnimLib;
 /// </summary>
 [UsedImplicitly]
 public sealed class AnimPlayer : ModPlayer {
-  [field: AllowNull, MaybeNull]
-  internal AnimCharacterCollection Characters => field ??= new AnimCharacterCollection(Player);
+  private const string StateDataKey = "stateData";
 
-  private bool _hasInitialized;
+  internal State[] States = null!; // NewInstance() -> StateLoader.NewInstance
 
-  public override void OnEnterWorld() {
-    ModContent.GetInstance<DebugUISystem>().SetCharacters(Characters);
+  public T GetState<T>() where T : State => (T)GetState(ModContent.GetInstance<T>().Index);
+
+  public T GetState<T>(int index) where T : State {
+    State result = GetState(index);
+    if (result is T t) {
+      return t;
+    }
+
+    throw new ArgumentException("Specified index does not refer to a State of type " + typeof(T).Name);
   }
 
-  public override void ModifyMaxStats(out StatModifier health, out StatModifier mana) {
-    base.ModifyMaxStats(out health, out mana);
+  public State GetState(State templateState) => GetState(templateState.Index);
 
-    // Treating this method as a "PostInitialize",
-    // as it needs to run after all other mods' Initialize
-    // and this is the closest hook after Initialize
-    if (_hasInitialized) {
-      return;
-    }
+  public State GetState(int index) {
+    ArgumentOutOfRangeException.ThrowIfNegative(index, nameof(index));
+    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, States.Length, nameof(index));
+    return States[index];
+  }
 
-    Characters.Initialize();
-    Characters.Enter(null);
-    _hasInitialized = true;
-    if (Main.dedServ) {
-      StatesNet.CreateNetIDs(Characters);
-      StatesNet.AssignNetIDs(Characters);
-    }
+  public override void OnEnterWorld() {
+    ModContent.GetInstance<DebugUISystem>().SetCharacters(GetState<AnimCharacterCollection>());
+  }
+
+  public override ModPlayer NewInstance(Player entity) {
+    AnimPlayer? newInstance = (AnimPlayer)base.NewInstance(entity);
+    StateLoader.NewInstance(newInstance); // Creates and populates States array
+    return newInstance;
   }
 
   /// <inheritdoc/>
   public override void SendClientChanges(ModPlayer clientPlayer) {
-    if (Characters.IndirectNetUpdate) {
+    if (States.Any(s => s.NetUpdate)) {
       ModContent.GetInstance<ModNetHandler>().StatePacketHandler.SendPacket(255, Player.whoAmI);
     }
   }
@@ -47,22 +55,13 @@ public sealed class AnimPlayer : ModPlayer {
   // ReSharper disable once RedundantOverriddenMember
   public override void CopyClientState(ModPlayer targetCopy) => base.CopyClientState(targetCopy);
 
-  /// <summary>
-  /// Updates the <see cref="AnimCharacterCollection.ActiveCharacter"/>.
-  /// </summary>
-  public override void PostUpdateRunSpeeds() {
-    Characters.PreUpdate();
-    Characters.Update();
+  public override void SaveData(TagCompound tag) {
+    tag[StateDataKey] = StateIO.SaveStateData(Player);
   }
 
-  /// <summary>
-  /// PostUpdate for the <see cref="AnimCharacterCollection.ActiveCharacter"/>.
-  /// </summary>
-  public override void PostUpdate() {
-    Characters.PostUpdate();
-  }
-
-  public override void FrameEffects() {
-    Characters.UpdateAnimations();
+  public override void LoadData(TagCompound tag) {
+    if (tag.TryGet(StateDataKey, out IList<TagCompound> stateData)) {
+      StateIO.LoadStateData(Player, stateData);
+    }
   }
 }

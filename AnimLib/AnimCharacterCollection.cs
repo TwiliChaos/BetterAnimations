@@ -1,69 +1,85 @@
-using System.IO;
 using System.Linq;
-using AnimLib.Networking;
 using AnimLib.States;
-using AnimLib.UI.Debug;
+using AnimLib.Systems;
+using Terraria.ModLoader.IO;
 
 namespace AnimLib;
 
-public sealed class AnimCharacterCollection : StateMachine {
-  internal AnimCharacterCollection(Player player) : base(player) {
-  }
-
-  public override Player Entity => (Player)base.Entity;
-
+public sealed partial class AnimCharacterCollection : StateMachine {
   public AnimCharacter? ActiveCharacter => ActiveChild as AnimCharacter;
 
-  public IEnumerable<AnimCharacter> Characters => Children.OfType<AnimCharacter>();
-
-  private readonly CharacterStack _characterStack = new();
+  public IEnumerable<AnimCharacter> Characters => Children.Cast<AnimCharacter>();
 
   private TimeSpan _lastAnimationUpdate;
 
-  internal bool TryAddCharacter(AnimCharacter character) {
-    if (ChildrenByType.ContainsKey(character.GetType().Name)) {
-      return false;
-    }
+  /// <summary>
+  /// Stores the colors of the player before any <see cref="AnimCharacter"/> was enabled,
+  /// and restores them when no <see cref="AnimCharacter"/> is active.
+  /// </summary>
+  private readonly AnimCharacterStyle _vanillaStyle = new();
 
-    AddChild(character);
-    return true;
+  /// <inheritdoc cref="AnimCharacter.IsDrawingInUI"/>
+  internal bool IsDrawingInUI;
+
+  /// <inheritdoc cref="AnimCharacter.UIAnimated"/>
+  internal bool UIAnimated;
+
+  /// <inheritdoc cref="AnimCharacter.UIAnimationCounter"/>
+  internal int UIAnimationCounter = -1;
+
+  /// <inheritdoc cref="AnimCharacter.UICategoryIndex"/>
+  internal int UICategoryIndex = -1;
+
+  /// Used to detect category changes
+  internal int UICategoryIndexLastFrame = -1;
+
+  internal int UILastCategoryIndex = -1;
+
+  internal int UICategoryCounterStart = 0;
+
+  internal int UICategoryAnimationCounter => UIAnimationCounter - UICategoryCounterStart;
+
+  protected override bool SetActiveChildOnEnter => false;
+
+  public AnimCharacter GetCharacter(int index) => GetState(index) as AnimCharacter ??
+    throw new ArgumentException("Specified index does not refer to an AnimCharacter", nameof(index));
+
+  public override void Initialize() {
+    _vanillaStyle.AssignFromPlayer(Player);
   }
 
-  public T FindAbility<T>() where T : AbilityState {
-    foreach (AnimCharacter character in Characters) {
-      T? ability = character.AbilityStates.OfType<T>().FirstOrDefault();
-      if (ability is not null) {
-        return ability;
-      }
-    }
-
-    throw new ArgumentException($"No character contains Ability of type {typeof(T).Name}");
+  public override void PostInitialize() {
+    SetActive(true);
   }
 
-  public bool CanEnable(AnimCharacter character) {
-    ArgumentNullException.ThrowIfNull(character);
-    return ActiveChild is not AnimCharacter activeCharacter ||
-      activeCharacter.Priority == AnimCharacter.ActivationPriority.Lowest ||
-      activeCharacter.Priority != AnimCharacter.ActivationPriority.Highest ||
-      activeCharacter.Priority < character.Priority;
+  public override void RegisterChildren(List<State> statesToAdd) {
+    statesToAdd.AddRange(AllStatesArray.OfType<AnimCharacter>());
   }
 
   /// <summary>
-  /// Enables the given <see cref="AnimCharacter"/> with the given <see cref="AnimCharacter.ActivationPriority"/>.
-  /// If there was an <see cref="ActiveCharacter"/>, it will be disabled and put into the character stack.
+  /// Enables the specified <see cref="AnimCharacter"/>.
   /// </summary>
   /// <param name="character"></param>
   internal void Enable(AnimCharacter character) {
-    if (ActiveCharacter is not null) {
-      // Set stack position of previous active char to most recent.
-      _characterStack.TryRemove(ActiveCharacter);
-      _characterStack.Push(ActiveCharacter);
+    if (ReferenceEquals(character, ActiveCharacter)) {
+      return;
     }
 
-    TrySetActiveChild(character);
+    Main.CancelClothesWindow(quiet: true);
+    if (ActiveCharacter is null) {
+      _vanillaStyle.AssignFromPlayer(Player);
+    }
 
-    _characterStack.TryRemove(character);
+    if (!TrySetActiveChild(character)) {
+      return;
+    }
+
+    character.Style.AssignToPlayer(Player);
+
     ModContent.GetInstance<DebugUISystem>().TrySetActiveCharacter(this);
+    if (MrPlagueRacesModExists) {
+      Disable_PlagueRace();
+    }
   }
 
   /// <summary>
@@ -73,128 +89,87 @@ public sealed class AnimCharacterCollection : StateMachine {
   /// </summary>
   /// <param name="character">The <see cref="AnimCharacter"/> to disable.</param>
   internal void Disable(AnimCharacter character) {
-    _characterStack.TryRemove(character);
-    if (character != ActiveCharacter) {
+    Main.CancelClothesWindow(quiet: true);
+    if (!ReferenceEquals(character, ActiveCharacter)) {
       return;
     }
 
-    AnimCharacter? newCharacter = _characterStack.Pop();
-    if (newCharacter is not null) {
-      Enable(newCharacter);
-    }
-    else {
-      ClearActiveChild();
-      ModContent.GetInstance<DebugUISystem>().TrySetActiveCharacter(this);
+    character.Style.AssignFromPlayer(Player);
+    ClearActiveChild();
+    _vanillaStyle.AssignToPlayer(Player);
+
+    ModContent.GetInstance<DebugUISystem>().TrySetActiveCharacter(this);
+    if (MrPlagueRacesModExists) {
+      Enable_PlagueRace();
     }
   }
 
-  internal void UpdateAnimations() {
+  public override void FrameEffects() {
+    if (IsDrawingInUI) {
+      return;
+    }
+
     TimeSpan currentTime = Main.gameTimeCache.TotalGameTime;
     float delta = (float)(currentTime - _lastAnimationUpdate).TotalSeconds;
     _lastAnimationUpdate = currentTime;
+
     if (delta > 0) {
-      ActiveCharacter?.UpdateAnimations(delta);
+      foreach (AnimCharacter animCharacter in Characters) {
+        animCharacter.UpdateAnimations(delta);
+      }
     }
   }
 
-  internal void NetSyncAll(ISync sync) {
-    var iter = sync.SyncEnumerate(this, GetAllChildrenCount, GetAllChildren, WriteChildId, ReadChildId);
-
-    foreach (State? netUpdateChild in iter) {
-      netUpdateChild.NetSyncInternal(sync);
+  public override void PreSavePlayer() {
+    if (ActiveCharacter is not null) {
+      ActiveCharacter.Style.AssignFromPlayer(Player);
+      _vanillaStyle.AssignToPlayer(Player);
     }
-
-    return;
-
-    static int GetAllChildrenCount(AnimCharacterCollection me) => me.AllChildrenCount;
-    static IEnumerable<State> GetAllChildren(AnimCharacterCollection me) => me.AllChildren;
-    static void WriteChildId(BinaryWriter writer, State child) => writer.Write(child.NetId);
-    static State ReadChildId(AnimCharacterCollection me, BinaryReader reader) => me.GetChild(reader.ReadInt16());
+    else {
+      _vanillaStyle.AssignFromPlayer(Player);
+    }
   }
 
-  /// <summary>
-  /// If only one nested child needs a <see cref="State.NetUpdate"/>,
-  /// this method will call the non-internal <see cref="State.NetSync"/>,
-  /// "<inheritdoc cref="StateMachine.NetSyncActiveChild"/>"
-  /// and call that one child's <see cref="State.NetSyncInternal"/>
-  /// <para />
-  /// If more than one nested child requires an update,
-  /// instead performs base class functionality (all the below):
-  /// <para />
-  /// Calls StateMachine:
-  /// <para><inheritdoc cref="StateMachine.NetSyncInternal"/></para>
-  /// End StateMachine.
-  /// </summary>
-  /// <param name="sync"></param>
-  internal override void NetSyncInternal(ISync sync) {
-    // Should reduce packet size
-    if (sync is IWriteSync writeSync && TryWriteSingleUpdate(writeSync) ||
-        sync is IReadSync readSync && TryReadSingleUpdate(readSync)) {
+  public override void PostSavePlayer() {
+    // character.color -> player.color
+    ActiveCharacter?.Style.AssignToPlayer(Player);
+  }
+
+  public override void PostUpdate() {
+    if (MrPlagueRacesModExists) {
+      DisableCharacterIfRaceActive();
+    }
+  }
+
+  public override void LoadData(TagCompound tag) {
+    if (!tag.TryGet("activeCharacter", out TagCompound characterTag)) {
       return;
     }
 
-    base.NetSyncInternal(sync);
-  }
-
-  private bool TryWriteSingleUpdate(IWriteSync write) {
-    BinaryWriter writer = write.Writer;
-
-    int netCount = GetAllNetChildren(includeIndirect: false).Count();
-
-    bool hasSingleUpdate = netCount == 1;
-    writer.Write(!hasSingleUpdate);
-    if (!hasSingleUpdate) {
-      return false;
+    string mod = characterTag.GetString("mod");
+    string name = characterTag.GetString("name");
+    if (ModContent.TryFind(mod, name, out AnimCharacter template)) {
+      AnimCharacter character = GetState(template);
+      Enable(character);
     }
 
-    NetSync(write);
-    NetSyncActiveChild(write);
-    State child = GetAllNetChildren(includeIndirect: false).First();
-    writer.Write7BitEncodedInt(child.NetId);
-    child.NetSyncInternal(write);
-    return true;
+    Load_PlagueRace(tag);
   }
 
-  private bool TryReadSingleUpdate(IReadSync read) {
-    BinaryReader reader = read.Reader;
-
-    bool multiUpdate = reader.ReadBoolean();
-    if (multiUpdate) {
-      return false;
+  public override void SaveData(TagCompound tag) {
+    if (ActiveCharacter is null) {
+      return;
     }
 
-    NetSync(read);
-    NetSyncActiveChild(read);
-    int id = reader.Read7BitEncodedInt();
-    State child = GetChild(id);
-    child.NetSyncInternal(read);
-    return true;
-  }
-}
+    tag["activeCharacter"] = new TagCompound {
+      ["mod"] = ActiveCharacter.Mod.Name,
+      ["name"] = ActiveCharacter.Name
+    };
 
-internal class CharacterStack {
-  private readonly List<AnimCharacter> _items = [];
-
-  public void Push(AnimCharacter item) {
-    ArgumentNullException.ThrowIfNull(item);
-    _items.Add(item);
-  }
-
-  public AnimCharacter? Pop() {
-    if (_items.Count <= 0) {
-      return default;
+    if (_storedRace is not null) {
+      tag[RaceSaveString] = _storedRace;
     }
 
-    AnimCharacter last = _items[^1];
-    _items.RemoveAt(_items.Count - 1);
-    return last;
-  }
-
-  public void TryRemove(AnimCharacter item) {
-    ArgumentNullException.ThrowIfNull(item);
-    int index = _items.IndexOf(item);
-    if (index >= 0) {
-      _items.RemoveAt(index);
-    }
+    Save_PlagueRace(tag);
   }
 }

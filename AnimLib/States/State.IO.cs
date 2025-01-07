@@ -4,8 +4,6 @@ using AnimLib.Networking;
 namespace AnimLib.States;
 
 public abstract partial class State {
-  public short NetId { get; internal set; } = -1;
-
   /// <summary>
   /// Whether this <see cref="State"/> needs to be synced with other clients.
   /// This value is always <see langword="false"/> on non-local <see cref="Player"/> instances,
@@ -15,45 +13,8 @@ public abstract partial class State {
     get;
     protected internal set {
       // Ignore NetUpdate for non-local player
-      if (!IsLocal && !Main.dedServ) {
-        return;
-      }
-
-      field = value;
-      if (value) {
-        OnNetUpdateNeeded();
-
-        // True value propagates to the root
-        if (Parent is not null) {
-          Parent.IndirectNetUpdate = true;
-        }
-      }
-      else if (this is CompositeState sm) {
-        IndirectNetUpdate = false;
-
-        // False value propagates to all children
-        foreach (State? child in sm.Children) {
-          child.NetUpdate = false;
-        }
-      }
-    }
-  }
-
-  /// <summary>
-  /// Whether this <see cref="State"/> should NetUpdate
-  /// as a consequence of a child <see cref="NetUpdate"/> set to <see langword="true"/>.
-  /// </summary>
-  internal bool IndirectNetUpdate {
-    get;
-    private set {
-      // Ignore NetUpdate for non-local player
-      if (!IsLocal && !Main.dedServ) {
-        return;
-      }
-
-      field = value;
-      if (value && Parent is not null) {
-        Parent.IndirectNetUpdate = true;
+      if (IsLocal || Main.dedServ) {
+        field = value;
       }
     }
   }
@@ -65,24 +26,10 @@ public abstract partial class State {
   /// <remarks>
   /// If overriding this method, make sure to always call the base method.
   /// </remarks>
-  internal virtual void NetSyncInternal(ISync sync) {
-    IReadSync? read = sync as IReadSync;
-    if (read is not null && !Main.dedServ) {
-      Log.Debug($"{Main.time} Read [{Name}] Before Pos: {read.Reader.BaseStream.Position}");
-    }
-
+  internal virtual void NetSyncInternal(NetSyncer sync) {
     sync.Sync7BitEncodedInt(ref _activeTime);
+    sync.Sync7BitEncodedInt(ref _inactiveTime);
     NetSync(sync);
-
-    if (read is not null && !Main.dedServ) {
-      Log.Debug($"{Main.time} Read [{Name}] After Pos: {read.Reader.BaseStream.Position}");
-    }
-
-    if (Main.dedServ) {
-      // Client sent this State to server,
-      // We want to ensure we send this state to other clients.
-      NetUpdate = true;
-    }
   }
 
   /// <summary>
@@ -99,12 +46,6 @@ public abstract partial class State {
   /// check <c>if (ActiveTime == 0)</c>,
   /// and set <see cref="NetUpdate"/> to <see langword="true"/> in <see cref="OnEnter"/>.
   /// </remarks>
-  protected virtual void NetSync(ISync sync) {
-  }
-
-  /// <summary>
-  /// Called when <see cref="NetUpdate"/> is set to <see langword="true"/>.
-  /// </summary>
-  protected virtual void OnNetUpdateNeeded() {
+  protected virtual void NetSync(NetSyncer sync) {
   }
 }

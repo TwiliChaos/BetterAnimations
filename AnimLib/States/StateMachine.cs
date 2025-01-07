@@ -3,34 +3,28 @@
 namespace AnimLib.States;
 
 /// <summary>
-/// <see cref="CompositeState"/> where up to one child <see cref="State"/> is active at a time.
-/// Supports transitions to and from children <see cref="State">States</see>.
-/// Includes logic for <see cref="AddInterruptible{TFrom}"/> and <see cref="TrySetActiveChild"/>
+/// <see cref="State"/> where up to one child State is active at a time.
+/// Supports transitions to and from children States.
+/// Includes logic for <see cref="State.RegisterInterruptibles"/> and <see cref="TrySetActiveChild"/>
 /// <para />
-/// The first child added with <see cref="CompositeState.AddChild{T}"/> will be the <see cref="ActiveChild"/>
+/// The first child added with <see cref="State.RegisterChildren"/> will be the <see cref="ActiveChild"/>
 /// when <see cref="Enter"/> is used.
 /// </summary>
-public abstract partial class StateMachine(Entity entity) : CompositeState(entity) {
+public abstract partial class StateMachine : State {
   /// <summary>
   /// The current active child instance to receive game updates, -or-
   /// <see langword="null"/> if this instance has no active child instance.
   /// Setting this value will call <see cref="State.Exit"/> on the previous child,
   /// and <see cref="State.Enter"/> on the new child.
   /// </summary>
-  public State? ActiveChild {
-    get;
-    private set {
-      if (ReferenceEquals(value, field)) {
-        return;
-      }
+  public State? ActiveChild { get; private set; }
 
-      State? lastChild = field;
-
-      field?.Exit();
-      field = value;
-      field?.Enter(lastChild);
-    }
-  }
+  /// <summary>
+  /// Whether to set <see cref="ActiveChild"/> to the first child of <see cref="State.Children"/> when <see cref="Enter"/> is called.
+  /// <para />
+  /// Set this value to <see langword="false"/> if you want to start this state without any active state.
+  /// </summary>
+  protected virtual bool SetActiveChildOnEnter => true;
 
   /// <summary>
   /// Overridden to represent up to one active child at a time.
@@ -43,96 +37,66 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
     }
   }
 
+
   private State? _initialChild;
 
-  internal readonly Dictionary<Type, List<State>> Interrupts = [];
+  private readonly Dictionary<ushort, State[]> _interrupts = [];
 
-  /// <summary>
-  /// Adds an interruptible from the specified <typeparamref name="TFrom"/>, to the specified <paramref name="to"/>.
-  /// The specified <paramref name="to"/> will have its <see cref="State.OnPreUpdateInterruptible"/> called while
-  /// <typeparamref name="TFrom"/> is active.
-  /// </summary>
-  /// <typeparam name="TFrom">Child that would be active at time of transition.</typeparam>
-  /// <param name="to">Child that can interrupt while <typeparamref name="TFrom"/> is active.</param>
-  /// <exception cref="ArgumentNullException">
-  /// <paramref name="to"/> cannot be <see langword="null"/>.
-  /// </exception>
-  /// <exception cref="ArgumentException">
-  /// The specified arguments must already be children of this <see cref="StateMachine"/> instance,
-  /// and must not already have an interruptible registered.
-  /// <para>
-  /// <typeparamref name="TFrom"/> cannot already have an interruptible to <paramref name="to"/>.
-  /// </para>
-  /// </exception>
-  /// <remarks>
-  /// This is mainly used for certain <see cref="State"/>s which can activate from a wider variety of states,
-  /// and activation logic would be better suited in the <paramref name="to"/> state that would be activated.
-  /// </remarks>
-  /// <seealso cref="State.OnPreUpdateInterruptible"/>
-  public void AddInterruptible<TFrom>(State to) where TFrom : State {
-    ArgumentNullException.ThrowIfNull(to);
 
-    string name = typeof(TFrom).Name;
-    if (!ChildrenByType.TryGetValue(name, out State? from)) {
-      throw new ArgumentException($"State {Name} does not have Child {name} to transition from", nameof(TFrom));
-    }
+  protected override bool IsChildActiveToThis(State child) =>
+    ActiveChild is not null && ActiveChild.Index == child.Index;
 
-    if (!ChildrenByType.Values.Contains(to)) {
-      throw new ArgumentException($"State {Name} does not have Child {to} to transition to.", nameof(to));
-    }
-
-    if (!Interrupts.TryGetValue(from.GetType(), out var list)) {
-      Interrupts.Add(from.GetType(), [to]);
-      return;
-    }
-
-    if (list.Contains(to)) {
-      throw new ArgumentException($"State {from} already contains transition {to}", nameof(to));
-    }
-
-    list.Add(to);
-  }
-
-  internal override void Initialize() {
-    base.Initialize();
-
+  public override void Initialize() {
     // Additionally set first child to _initialChild
-    State? firstChild = Children.FirstOrDefault();
-    if (firstChild is not null) {
-      _initialChild = firstChild;
+    if (SetActiveChildOnEnter) {
+      _initialChild ??= Children.FirstOrDefault();
+    }
+
+    var interruptIds = Hierarchy.ChildrenInterruptibleIds;
+    foreach ((ushort fromState, ushort[]? toStates) in interruptIds) {
+      _interrupts[fromState] = toStates.Select(i => AllStates[i]).ToArray();
     }
   }
 
   internal sealed override void Enter(State? fromState) {
+    if (SetActiveChildOnEnter) {
+      _initialChild ??= Children.FirstOrDefault();
+    }
+
     ActiveTime = 0;
+    InactiveTime = 0;
     if (ActiveChild is null && _initialChild is not null) {
       ActiveChild = _initialChild;
     }
 
     OnEnter(fromState);
-    ActiveChild?.Enter(fromState);
+    ActiveChild?.SetActive(true);
   }
 
-  internal sealed override void PreUpdate() {
-    if (!IsActive) {
-      return;
-    }
+  internal void UpdateInterruptChildren() {
+    foreach ((ushort id, var interruptStates) in _interrupts) {
+      State child = GetState(id);
+      if (!child.Active) {
+        continue;
+      }
 
-    ActiveTime++;
-    OnPreUpdate();
-    State? activeChild = ActiveChild;
-    if (activeChild is not null && Interrupts.TryGetValue(activeChild.GetType(), out var list)) {
-      State? interrupt = list.FirstOrDefault(i => i.OnPreUpdateInterruptible(activeChild) && i.CanEnter());
-      if (interrupt is not null) {
-        ActiveChild = interrupt;
+      foreach (State interruptState in interruptStates.Where(state =>
+                 state is not AbilityState ability || ability.Unlocked)) {
+        if (!interruptState.UpdateInterrupt(child) || !interruptState.CanEnter()) {
+          continue;
+        }
+
+        ActiveChild?.SetActive(false, interruptState);
+        ActiveChild = interruptState;
+        ActiveChild.SetActive(true, child);
         NetUpdate = true;
         return;
       }
     }
+  }
 
-    foreach (State sm in ActiveChildren) {
-      sm.PreUpdate();
-    }
+  protected bool TrySetActiveChild<T>(bool checkTransition = true, bool silent = false) where T : State, new() {
+    return TrySetActiveChild(GetState<T>(), checkTransition, silent);
   }
 
   /// <summary>
@@ -151,35 +115,48 @@ public abstract partial class StateMachine(Entity entity) : CompositeState(entit
   /// <param name="silent">
   /// Whether to prevent NetUpdate if this method succeeds.
   /// </param>
-  /// <exception cref="ArgumentException">
-  /// <paramref name="toChild"/> is not a child of this instance.
-  /// </exception>
   protected internal bool TrySetActiveChild(State toChild, bool checkTransition = true, bool silent = false) {
-    if (ReferenceEquals(ActiveChild, toChild)) {
+    ArgumentNullException.ThrowIfNull(toChild);
+
+    // Ensure that the specified instance is part of AllStates, and not a template instance.
+    toChild = AllStates[toChild.Index];
+
+    State? lastActiveChild = ActiveChild;
+    if (ReferenceEquals(lastActiveChild, toChild)) {
       return false;
     }
 
-    if (!ChildrenByType.ContainsKey(toChild.GetType().Name)) {
+    if (!Hierarchy.ChildrenIds.Contains(toChild.Index)) {
       throw new ArgumentException($"{Name} does not contain child {toChild.Name}");
     }
 
-    if (checkTransition) {
-      if (ActiveChild is not null &&
-          (!toChild.CanEnter() ||
-            !toChild.CanTransitionFrom(ActiveChild))) {
-        return false;
-      }
+    if (checkTransition && !CanTransition(toChild, lastActiveChild)) {
+      return false;
     }
 
-    ActiveChild = toChild;
-    if (!silent) {
-      NetUpdate = true;
-    }
-
+    SetActiveChild(toChild, silent, lastActiveChild);
     return true;
   }
 
-  protected void ClearActiveChild(bool silent = false) {
+  private void SetActiveChild(State toChild, bool silent, State? lastActiveChild) {
+    lastActiveChild?.SetActive(false);
+    ActiveChild = toChild;
+    toChild.SetActive(true, lastActiveChild);
+    if (!silent) {
+      NetUpdate = true;
+    }
+  }
+
+  private static bool CanTransition(State toChild, State? lastActiveChild) {
+    return lastActiveChild is null || (toChild.CanEnter() && toChild.CanTransitionFrom(lastActiveChild));
+  }
+
+  public void ClearActiveChild(bool silent = false) {
+    if (ActiveChild is null) {
+      return;
+    }
+
+    ActiveChild.SetActive(false);
     ActiveChild = null;
     if (!silent) {
       NetUpdate = true;

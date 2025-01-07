@@ -1,11 +1,10 @@
-﻿using AnimLib.Animations;
-using AnimLib.UI.Debug;
+using AnimLib.Animations;
 using Terraria.DataStructures;
 
 namespace AnimLib.States;
 
-public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity) {
-  protected abstract Asset<AnimSpriteSheet> SpriteSheetAsset { get; }
+public abstract class AnimatedStateMachine : StateMachine {
+  public abstract Asset<AnimSpriteSheet> SpriteSheetAsset { get; }
 
   /// <summary>
   /// Value of <see cref="SpriteSheetAsset"/>. Do not store this value.
@@ -171,13 +170,13 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
   /// Calls <see cref="Play"/> when <see cref="AnimationOptions.FrameIndex">AnimationOptions.FrameIndex</see> is <see langword="null"/>
   /// </summary>
   /// <param name="options"></param>
+  /// <param name="delta"></param>
   /// <exception cref="ArgumentException"></exception>
-  internal void UpdateAnimation(AnimationOptions options, float delta) {
+  internal void UpdateAnimation(AnimationOptions options, float delta = 1 / 60f) {
     ArgumentException.ThrowIfNullOrWhiteSpace(options.TagName);
 
     if (!SpriteSheet.TryGetTag(options.TagName, out AnimTag? tag)) {
-      string message = $"\"{options.TagName}\" is not a valid key for the main Animation tag.";
-      throw new ArgumentException(message, nameof(options));
+      throw new ArgumentException($"\"{options.TagName}\" is not a valid key for the Animation tag.", nameof(options));
     }
 
     if (options.FrameIndex.HasValue) {
@@ -192,7 +191,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
     bool isNewTag = options.TagName != CurrentTag.Name;
 
     SpriteRotation = options.Rotation + (options.RotationOffset && !isNewTag ? SpriteRotation : 0);
-    Effects = options.Effects ?? SpriteEffectsFromPlayer(Entity);
+    Effects = options.Effects ?? SpriteEffectsFromPlayer(Player);
 
     if (isNewTag) {
       SetTag(options.TagName, options.IsReversed);
@@ -219,6 +218,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
   /// <see cref="AnimTag.IsPingPong">AnimTag.IsPingPong</see> is <see langword="true"/>.
   /// </summary>
   /// <param name="options"></param>
+  /// <param name="delta"></param>
   private void Play(AnimationOptions options, float delta) {
     float duration = CurrentFrame.Duration;
     float newFrameTime = FrameTime + options.Speed * delta;
@@ -229,7 +229,6 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
       return;
     }
 
-    // Calculate number of frames to advance
     AnimTag currentTag = CurrentTag;
     var frames = currentTag.Frames;
     int loopCount = options.LoopCount ?? currentTag.LoopCount;
@@ -243,7 +242,7 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
       // Determine next frame
       bool endOfFrame = newFrameIndex == lastFrameIndex;
       if (endOfFrame) {
-        if (loopCount > 0 && TimesLooped >= loopCount) {
+        if (loopCount > 0 && TimesLooped + 1 >= loopCount || frames.Length == 1) {
           // Do not change frame
           break;
         }
@@ -272,17 +271,16 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
     FrameTime = newFrameTime;
   }
 
-  private static SpriteEffects SpriteEffectsFromPlayer(Entity entity) {
+  private static SpriteEffects SpriteEffectsFromPlayer(Player player) {
     SpriteEffects effects = SpriteEffects.None;
-    if (entity.direction < 0) effects |= SpriteEffects.FlipHorizontally;
-    float gravDir = entity is Player p ? p.gravDir : 1;
-    if (gravDir < 0) effects |= SpriteEffects.FlipVertically;
+    if (player.direction < 0) effects |= SpriteEffects.FlipHorizontally;
+    if (player.gravDir < 0) effects |= SpriteEffects.FlipVertically;
     return effects;
   }
 
   private void SetTag(string newTagName, bool? isReversed = null) {
     if (!SpriteSheet.TryGetTag(newTagName, out AnimTag? tag)) {
-      throw new ArgumentException($"{this} does not have any AnimTags with name \"{newTagName}\"");
+      throw new ArgumentException($"{Name} does not have any AnimTags with name \"{newTagName}\"");
     }
 
     SetTag(tag, isReversed);
@@ -294,24 +292,5 @@ public abstract class AnimatedStateMachine(Entity entity) : StateMachine(entity)
     Reversed = isReversed ?? tag.IsReversed;
     FrameIndex = Reversed ? tag.Frames.Length - 1 : 0;
     TimesLooped = 0;
-  }
-
-  internal void DebugAnimationText(DebugUIState ui) {
-    ui.DrawAppendLabelValue("Aseprite file", SpriteSheetAsset.Name);
-    ui.DrawAppendLabelValue("AnimTag", CurrentTag.Name);
-    ui.DrawAppendLabelValue("Frame", FrameIndex + 1, max:CurrentTag.Frames.Length);
-    ui.DrawAppendLabelValue("Frame (Atlas)", CurrentFrame.AtlasFrameIndex);
-    ui.DrawAppendLabelValue("Frame Time", FrameTime, format:['F']);
-    ui.DrawAppendLabelValue("Frame Duration", CurrentFrame.Duration, format:['F']);
-    if (CurrentTag.LoopCount > 0) {
-      ui.DrawAppendLabelValue("Times Looped", TimesLooped, max:CurrentTag.LoopCount);
-    }
-    else {
-      ui.DrawAppendLabelValue("Times Looped", TimesLooped);
-    }
-
-    ui.DrawAppendLabelValue("Sprite Rotation", SpriteRotation);
-    ui.DrawAppendBoolean(Reversed, color:Color.White);
-    ui.DrawAppendLabelValue("Effects", Effects);
   }
 }

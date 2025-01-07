@@ -7,7 +7,7 @@ public abstract partial class AnimCharacter {
   /// List names of <see cref="AnimCompatSystem"/>s active by default
   /// in order to block their work, when <see cref="AnimCharacter"/> is active.
   /// </summary>
-  [Obsolete("Will be reworked")] public readonly HashSet<string> AnimCompatSystemBlocklist = [];
+  /*[Obsolete("Will be reworked")]*/ public readonly HashSet<string> AnimCompatSystemBlocklist = [];
 
   private bool _graphicsDisabledDirectly;
   private bool _animationUpdateDisabledDirectly;
@@ -39,11 +39,11 @@ public abstract partial class AnimCharacter {
   /// </summary>
   internal void UpdateConditions() {
     if (!_graphicsDisabledDirectly) {
-      GraphicsEnabledCompat = !GlobalCompatConditions.EvaluateDisableGraphics(Entity);
+      GraphicsEnabledCompat = !GlobalCompatConditions.EvaluateDisableGraphics(Player);
     }
 
     if (!_animationUpdateDisabledDirectly) {
-      AnimationUpdEnabledCompat = !GlobalCompatConditions.EvaluateDisableAnimationUpdate(Entity);
+      AnimationUpdEnabledCompat = !GlobalCompatConditions.EvaluateDisableAnimationUpdate(Player);
     }
 
     UpdateCustomConditions();

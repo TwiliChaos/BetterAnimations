@@ -10,10 +10,8 @@ namespace AnimLib.Projectiles;
 public abstract class AbilityProjectile<T> : AbilityProjectile where T : AbilityState {
   /// <summary>
   /// The <see cref="AbilityState"/> that this <see cref="AbilityProjectile{T}"/> belongs to.
-  /// It's recommended that you set this value on projectile creation, else it will be searched for.
   /// </summary>
-  public override T Ability =>
-    (T)(base.Ability ??= Player.GetModPlayer<AnimPlayer>().Characters.FindAbility<T>());
+  public override T Ability => (T)(base.Ability ??= Player.GetState<T>());
 }
 
 public abstract class AbilityProjectile : ModProjectile {

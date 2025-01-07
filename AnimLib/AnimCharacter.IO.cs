@@ -5,54 +5,44 @@ using Terraria.ModLoader.IO;
 namespace AnimLib;
 
 public abstract partial class AnimCharacter {
-  /// <summary>
-  /// Serializes all <see cref="AbilityStates"/> data into a new <see cref="TagCompound"/> and returns it.
-  /// You will want to call this in <see cref="ModPlayer.SaveData">ModPlayer.SaveData()</see>
-  /// </summary>
-  /// <returns>
-  /// An instance of <see cref="TagCompound"/> containing <see cref="States.AbilityState"/> save data.
-  /// </returns>
-  public TagCompound Save() {
-    TagCompound tag = [];
-    foreach (AbilityState state in AbilityStates) {
-      TagCompound stateTag = state.Save();
-      if (stateTag.Count > 0) {
-        tag[state.Name] = stateTag;
-      }
-    }
-
-    SaveCustomData(tag);
-
-    return tag;
-  }
+  private const string ActiveKey = "active";
+  private const string StyleKey = "style";
 
   /// <summary>
-  /// Deserializes all <see cref="AbilityStates"/> data from the given <see cref="TagCompound"/>.
-  /// You will want to call this in <see cref="ModPlayer.LoadData">ModPlayer.LoadData()</see>
+  /// Ensures that all <see cref="AbilityStates"/> levels are synced.
   /// </summary>
-  public void Load(TagCompound tag) {
-    foreach (AbilityState state in AbilityStates) {
-      if (tag.TryGet<TagCompound>(state.Name, out TagCompound? abilityTag)) {
-        state.Load(abilityTag);
-      }
-    }
-
-    LoadCustomData(tag);
-  }
-
-  /// <summary>
-  /// Syncs <see cref="IsEnabled"/>.
-  /// <para />
-  /// Calls ConcurrentState:
-  /// <para><inheritdoc cref="ConcurrentState.NetSyncInternal"/></para>
-  /// End ConcurrentState.
-  /// </summary>
-  internal override void NetSyncInternal(ISync sync) {
-    sync.Sync(ref _isEnabled);
+  internal override void NetSyncInternal(NetSyncer sync) {
     foreach (AbilityState abilityState in AbilityStates) {
       abilityState.SyncLevel(sync);
     }
 
+    Style.NetSync(sync);
+
     base.NetSyncInternal(sync);
+  }
+
+  public override void SaveData(TagCompound tag) {
+    tag[ActiveKey] = Active;
+    if (Active) {
+      Style.AssignFromPlayer(Player);
+    }
+
+    if (Style.Save(_defaultStyle, out TagCompound? styleTag)) {
+      tag[StyleKey] = styleTag;
+    }
+  }
+
+  public override void LoadData(TagCompound tag) {
+    if (tag.TryGet(ActiveKey, out bool active) && active && Characters.ActiveCharacter is null) {
+      Enable();
+    }
+
+    if (tag.TryGet(StyleKey, out TagCompound styleTag)) {
+      Style.Load(styleTag, _defaultStyle);
+    }
+
+    if (Active) {
+      Style.AssignToPlayer(Player);
+    }
   }
 }

@@ -1,5 +1,4 @@
-﻿using System.IO;
-using AnimLib.Networking;
+﻿using AnimLib.Networking;
 
 namespace AnimLib.States;
 
@@ -7,50 +6,40 @@ public abstract partial class StateMachine {
   /// <summary>
   /// <inheritdoc cref="NetSyncActiveChild"/>
   /// <para />
-  /// Calls CompositeState:
-  /// <para />
-  /// <inheritdoc cref="CompositeState.NetSyncInternal"/>
-  /// <para />
-  /// End CompositeState.
+  /// Calls State:
+  /// <br/>
+  /// <inheritdoc cref="State.NetSyncInternal"/>
+  /// <br/>
+  /// End State.
   /// </summary>
   /// <param name="sync"></param>
-  internal override void NetSyncInternal(ISync sync) {
+  internal override void NetSyncInternal(NetSyncer sync) {
     NetSyncActiveChild(sync);
     base.NetSyncInternal(sync);
   }
 
   /// <summary>
-  /// Syncs the <see cref="ActiveChild"/>, by <see cref="State.NetId"/>.
+  /// Syncs the value of <see cref="ActiveChild"/>, by <see cref="State.Index"/>.
   /// </summary>
   /// <param name="sync"></param>
-  private protected void NetSyncActiveChild(ISync sync) {
-    State? child = ActiveChild;
-    sync.SyncNullable(this, ref child, WriteId, ReadId, ReadNull);
-  }
+  private void NetSyncActiveChild(NetSyncer sync) {
+    bool hasChild = ActiveChild is not null;
+    sync.Sync(ref hasChild);
 
-  private static void WriteId(BinaryWriter writer, State state) {
-    switch (StatesNet.Count) {
-      case <= 0xFF:
-        writer.Write((byte)state.NetId);
-        break;
-      case <= 0x4000:
-        writer.Write7BitEncodedInt(state.NetId);
-        break;
-      default:
-        writer.Write(state.NetId);
-        break;
+    switch (sync) {
+      case WriteSyncer writeSync when hasChild: {
+        writeSync.Writer.Write7BitEncodedInt(ActiveChild!.Index);
+        return;
+      }
+      case ReadSyncer readSync when hasChild: {
+        int id = readSync.Reader.Read7BitEncodedInt();
+        State child = GetState(id);
+        TrySetActiveChild(child, checkTransition: false);
+        return;
+      }
+      case ReadSyncer:
+        ClearActiveChild(silent: false);
+        return;
     }
   }
-
-  private static void ReadId(BinaryReader reader, StateMachine me) {
-    int id = StatesNet.Count switch {
-      <= 0xFF => reader.ReadByte(),
-      <= 0x4000 => reader.Read7BitEncodedInt(),
-      _ => reader.ReadInt16()
-    };
-    State child = me.GetChild(id);
-    me.TrySetActiveChild(child, checkTransition: false);
-  }
-
-  private static void ReadNull(StateMachine me) => me.ClearActiveChild(silent: false);
 }
