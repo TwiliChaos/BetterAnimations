@@ -1,59 +1,64 @@
-﻿using System.Linq;
+﻿using System.Buffers;
+using System.Linq;
+using AnimLib.Animations;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Common;
 using AsepriteDotNet.Processors;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
-using Texture = AsepriteDotNet.Texture;
 
 namespace AnimLib.Aseprite.Processors;
 
 /// <summary>
-/// Defines a processor for processing multiple <see cref="Animations.TextureAtlas"/>es from an <see cref="AsepriteFile"/>,
-/// each corresponding to a root-level layer.
-///
-/// Creates a Dictionary where each entry key is the root-level layer name, and the value is an atlas that represents either
-///  the image of the root-level image layer, or
-///  the flattened result of a root-level group layer that contains one or more image layers.
+/// Defines a processor for processing multiple <see cref="AsepriteDotNet.TextureAtlas"/>es from an <see cref="AsepriteFile"/>,
+/// each corresponding to a target layer.
+/// <para />
+/// A target layer is any layer, regardless of nesting, whose UserData color is Green.
+/// <para />
+/// Creates a Dictionary of the following structure:
+/// <b>Key:</b> string representing the target layer path (e.g. "Root/Parent/Child")
+/// <b>Value:</b> <see cref="AsepriteDotNet.TextureAtlas"/> where the Texture is either:
+///   <li>An image of the image layer, or</li>
+///   <li>The flattened image of a group layer.</li>
 /// </summary>
 public static class AnimTextureAtlasProcessor {
   /// <summary>
-  /// Processes multiple <see cref="Animations.TextureAtlas"/>s from an <see cref="AsepriteFile"/>.
+  /// Processes multiple <see cref="AsepriteDotNet.TextureAtlas"/>s from an <see cref="AsepriteFile"/>.
   /// </summary>
   /// <param name="file">The <see cref="AsepriteFile"/> to process.</param>
   /// <param name="options">
   ///   Optional options to use when processing.  If <see langword="null"/>, then
   ///   <see cref="ProcessorOptions.Default"/> will be used.
   /// </param>
-  /// <returns>A Dictionary of root-level layers where each key is the layer name and the value is a flattened representation of that layer.</returns>
+  /// <returns>A Dictionary of target layers where each key is the layer name and the value is a flattened representation of that layer.</returns>
   /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null"/>.</exception>
-  public static Dictionary<string, AnimTextureAtlas> Process(AsepriteFile file, ProcessorOptions options) {
+  public static Dictionary<string, TextureAtlas> Process(AsepriteFile file, AnimProcessorOptions options) {
     ArgumentNullException.ThrowIfNull(file);
 
-    var allFrames = GetAllFrames(file, options);
+    var allFrames = GetLayerEntries(file, options);
 
     var atlasData = CreateTextureAtlases(file, options, allFrames);
 
     return atlasData;
   }
 
-  private static LayerEntry[] GetAllFrames(AsepriteFile file, ProcessorOptions options) {
-    // We want to know what all the valid root layers are
-    // These are layers that do not have a parent, and any children will be flattened into them
-    var rootLayers = GetRootLayers(file.Layers, options, out string[] names);
+  private static LayerEntry[] GetLayerEntries(AsepriteFile file, AnimProcessorOptions options) {
+    // We want to know what all the valid target layers are
+    // These are layers that will process into a texture, and any children will be flattened into them
+    var targetLayers = GetTargetLayers(file.Layers, file.Frames, options, out string[] names);
 
     int frameCount = file.Frames.Length;
-    var allFrames = new LayerEntry[rootLayers.Length];
+    var allFrames = new LayerEntry[targetLayers.Length];
     for (int i = 0; i < allFrames.Length; i++) {
       allFrames[i] = new LayerEntry(names[i], new FrameEntry[frameCount]);
     }
 
-    for (int frameIndex = 0; frameIndex < frameCount; frameIndex++) {
-      var frameColorData = ProcessorHelper.FlattenFrameToTopLayers(file, frameIndex, options, rootLayers);
+    for (int i = 0; i < frameCount; i++) {
+      var frameColorData = ProcessorHelper.FlattenFrameToTopLayers(file, i, options, targetLayers);
 
-      for (int rootLayerIndex = 0; rootLayerIndex < frameColorData.Length; rootLayerIndex++) {
-        var colorData = frameColorData[rootLayerIndex];
-        allFrames[rootLayerIndex].Frames[frameIndex] = new FrameEntry(frameIndex, rootLayerIndex, colorData);
+      for (int targetLayerIndex = 0; targetLayerIndex < frameColorData.Length; targetLayerIndex++) {
+        var colorData = frameColorData[targetLayerIndex];
+        allFrames[targetLayerIndex].Frames[i] = new FrameEntry(i, targetLayerIndex, colorData);
       }
     }
 
@@ -61,30 +66,39 @@ public static class AnimTextureAtlasProcessor {
   }
 
   /// <summary>
-  /// A "root layer" is a layer which will represent a single texture atlas after processing.
-  /// In the case of group layers, eligible children will be flattened into the root layer.
+  /// A target is a layer which will represent a single texture atlas after processing.
+  /// In the case of group layers, eligible children will be flattened into the target layer.
   /// </summary>
   /// <param name="layers">
   /// All the layers in the <see cref="AsepriteFile"/>.
+  /// </param>
+  /// <param name="frames">
+  /// Used to validate that a layer contains any cels.
+  /// <br /> Any otherwise valid target layers that do not contain cels will be ignored.
+  /// <br /> A group layer will still be valid if any child layer contains at least one cel.
   /// </param>
   /// <param name="options">
   /// Options to determine whether a layer will be skipped.
   /// </param>
   /// <param name="names">
-  /// List of layer names representing the resulting root layers.
-  /// Unlike <see cref="AsepriteLayer.Name"/>, a name represents the full path of the layer.
+  /// List of layer names representing the resulting target layers.
+  /// <br /> Unlike <see cref="AsepriteLayer.Name"/>, a name represents the full path of the layer.
   /// </param>
   /// <returns></returns>
-  private static AsepriteLayer[] GetRootLayers(ReadOnlySpan<AsepriteLayer> layers, ProcessorOptions options, out string[] names) {
-    var rootLayers = new List<AsepriteLayer>(layers.Length);
-    var namesList = new List<string>(rootLayers.Capacity);
+  private static AsepriteLayer[] GetTargetLayers(
+    ReadOnlySpan<AsepriteLayer> layers,
+    ReadOnlySpan<AsepriteFrame> frames,
+    AnimProcessorOptions options,
+    out string[] names) {
+    var targetLayers = new List<AsepriteLayer>(layers.Length);
+    var namesList = new List<string>(targetLayers.Capacity);
 
     for (int i = 0; i < layers.Length; i++) {
       AsepriteLayer layer = layers[i];
       AsepriteUserData userData = layer.UserData;
-      if (userData.HasColor && (
-            userData.Color == UserDataColors.Red ||
-            userData.Color == UserDataColors.Yellow)) {
+      if (userData.HasColor && userData.Color.Value.PackedValue
+            is Colors.Red
+            or Colors.Yellow) {
         // Ignore any layer that has Red userdata, regardless of any other settings
         // Some layers we may want to treat as a reference rather than an art asset
         // Ignore any layer that has Yellow userdata, is meant for processing into Vector2s
@@ -111,10 +125,9 @@ public static class AnimTextureAtlasProcessor {
 
           // Ignore layer if all are of specific UserData colors
           AsepriteUserData childUserData = childLayer.UserData;
-          if (childUserData.HasColor &&
-              childUserData.Color == UserDataColors.Red ||
-              childUserData.Color == UserDataColors.Green ||
-              childUserData.Color == UserDataColors.Yellow) {
+          if (childUserData.HasColor && childUserData.Color.Value.PackedValue
+              is Colors.Red or Colors.Green
+              or Colors.Yellow or Colors.Blue) {
             continue;
           }
 
@@ -123,121 +136,143 @@ public static class AnimTextureAtlasProcessor {
         }
 
         if (isValid) {
-          rootLayers.Add(layer);
+          targetLayers.Add(layer);
           namesList.Add(ProcessorHelper.GetNestedLayerName(layers, i));
         }
 
         continue;
       }
 
-      if (userData.HasColor && userData.Color == UserDataColors.Green) {
+      if (userData is {HasColor: true, Color.PackedValue: Colors.Green or Colors.Blue }) {
         // Consider any layer that has Green userdata as a root layer, regardless of any other settings
         // Some layers we want imported but not visible while working on them in Aseprite
-        rootLayers.Add(layer);
+
+        // Skip if layer does not contain any cels
+        // (A use case may be a 1-frame file with dozens of programmatically accessed layers, with some layers not yet drawn)
+        foreach (AsepriteFrame frame in frames) {
+          foreach (AsepriteCel cel in frame.Cels) {
+            if (ReferenceEquals(cel.Layer, layer)) {
+              // ReSharper disable once GrammarMistakeInComment
+              goto AddLayer; // aka "break break;"
+            }
+          }
+        }
+
+        continue;
+
+        AddLayer:
+        targetLayers.Add(layer);
         namesList.Add(ProcessorHelper.GetNestedLayerName(layers, i));
         continue;
       }
 
-      if (layer.ChildLevel == 0 &&
-          (layer.IsVisible || !options.OnlyVisibleLayers) &&
-          (!layer.IsBackgroundLayer || options.IncludeBackgroundLayer)) {
-        rootLayers.Add(layer);
-        namesList.Add(layer.Name);
+      if (layer.ChildLevel != 0 ||
+          (!layer.IsVisible && options.OnlyVisibleLayers) ||
+          (layer.IsBackgroundLayer && !options.IncludeBackgroundLayer)) {
+        continue;
       }
+
+      targetLayers.Add(layer);
+      namesList.Add(layer.Name);
     }
 
     names = namesList.ToArray();
-    return rootLayers.ToArray();
+    return targetLayers.ToArray();
   }
 
-  private static Dictionary<string, AnimTextureAtlas> CreateTextureAtlases(AsepriteFile file, ProcessorOptions options,
+  private static Dictionary<string, TextureAtlas> CreateTextureAtlases(AsepriteFile file, AnimProcessorOptions options,
     LayerEntry[] allFrames) {
-    Dictionary<string, AnimTextureAtlas> atlasData = [];
-
-    // Allows upscaling during import, so art created at 1px is upscaled to the 2x2 pixel thing Terraria does
-    // TODO: Better handling of Aseprite sprite UserData properties.
-    // Maybe see if we can custom plugins for the Aseprite program just for UserData properties
-    bool upscale = file.UserData.Text?.Contains("upscale", StringComparison.OrdinalIgnoreCase) ?? false;
-    int scale = upscale ? 2 : 1;
+    Dictionary<string, TextureAtlas> atlasData = [];
 
     foreach ((string name, var frames) in allFrames) {
-      int frameCount = frames.Length;
-
-      Dictionary<int, int>? duplicateMap = null;
-      if (options.MergeDuplicateFrames) {
-        duplicateMap = GetDuplicateMap(frames);
-        frameCount -= duplicateMap.Count;
-      }
-
-      double sqrt = Math.Sqrt(frameCount);
-      int columns = (int)Math.Ceiling(sqrt);
-      int rows = (frameCount + columns - 1) / columns;
-
-      int frameWidth = file.CanvasWidth * scale;
-      int frameHeight = file.CanvasHeight * scale;
-      Size imageSize = new() {
-        Width = columns * frameWidth
-          + options.BorderPadding * 2
-          + options.Spacing * (columns - 1)
-          + options.InnerPadding * 2 * columns,
-        Height = columns * frameHeight
-          + options.BorderPadding * 2
-          + options.Spacing * (rows - 1)
-          + options.InnerPadding * 2 * rows
-      };
-
-      var imagePixels = new Rgba32[imageSize.Width * imageSize.Height];
-
-      var regions = new Rectangle[file.Frames.Length];
-      int offset = 0;
-      var originalToDuplicateLookup = new Dictionary<int, Rectangle>();
-
-      for (int i = 0; i < frames.Length; i++) {
-        FrameEntry frame = frames[i];
-
-        // Create region for duplicate frame, don't write to texture
-        if (options.MergeDuplicateFrames && duplicateMap!.TryGetValue(i, out int value)) {
-          regions[frame.FrameIndex] = originalToDuplicateLookup[value];
-          offset++;
-          continue;
-        }
-
-        // Get X and Y coords for where to write the color data to
-        int column = (i - offset) % columns;
-        int row = (i - offset) / columns;
-
-        int x = column * frameWidth
-          + options.BorderPadding
-          + options.Spacing * column
-          + options.InnerPadding * (column + column + 1);
-
-        int y = row * frameHeight
-          + options.BorderPadding
-          + options.Spacing * row
-          + options.InnerPadding * (row + row + 1);
-
-        // Write the color data
-        if (!frame.IsEmpty) {
-          if (upscale) {
-            WriteScaledPixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth);
-          }
-          else {
-            WritePixels(imagePixels, imageSize.Width, frame.ColorData, x, y, frameWidth);
-          }
-        }
-
-        Rectangle bounds = new(x, y, frameWidth, frameHeight);
-        regions[frame.FrameIndex] = bounds;
-        originalToDuplicateLookup.Add(i, bounds);
-      }
-
-      Texture aseTexture = new(name, imageSize, imagePixels);
-      var textureAsset = AnimLibMod.Instance.AseTextureToTexture2DAsset(aseTexture);
-      AnimTextureAtlas atlas = new(regions, textureAsset);
+      TextureAtlas atlas = CreateTextureAtlas(file, options, frames, name);
       atlasData.Add(name, atlas);
     }
 
     return atlasData;
+  }
+
+  private static TextureAtlas CreateTextureAtlas(AsepriteFile file, AnimProcessorOptions options, FrameEntry[] frames,
+    string name) {
+    bool upscale = options.Upscale;
+    bool mergeDuplicates = options.MergeDuplicateFrames;
+    int scale = upscale ? 2 : 1;
+    int frameCount = frames.Length;
+
+    Dictionary<int, int>? duplicateMap = null;
+    if (options.MergeDuplicateFrames) {
+      duplicateMap = GetDuplicateMap(frames);
+      frameCount -= duplicateMap.Count;
+    }
+
+    float sqrt = MathF.Sqrt(frameCount);
+    int columns = (int)Math.Ceiling(sqrt);
+    int rows = (frameCount + columns - 1) / columns;
+
+    int frameWidth = file.CanvasWidth * scale;
+    int frameHeight = file.CanvasHeight * scale;
+    int atlasWidth = columns * frameWidth
+      + options.BorderPadding * 2
+      + options.Spacing * (columns - 1)
+      + options.InnerPadding * 2 * columns;
+    int atlasHeight = columns * frameHeight
+        + options.BorderPadding * 2
+        + options.Spacing * (rows - 1)
+        + options.InnerPadding * 2 * rows;
+
+    var imagePixelArray = ArrayPool<Rgba32>.Shared.Rent(atlasWidth * atlasHeight);
+    var imagePixels = imagePixelArray.AsSpan(0, atlasWidth * atlasHeight);
+    imagePixels.Clear();
+
+    var regions = new Rectangle[file.Frames.Length];
+    int offset = 0;
+    var originalToDuplicateLookup = new Dictionary<int, Rectangle>();
+
+    for (int i = 0; i < frames.Length; i++) {
+      FrameEntry frame = frames[i];
+
+      // Create region for duplicate frame, don't write to texture
+      if (mergeDuplicates && duplicateMap!.TryGetValue(i, out int value)) {
+        regions[frame.FrameIndex] = originalToDuplicateLookup[value];
+        offset++;
+        continue;
+      }
+
+      // Get X and Y coords for where to write the color data to
+      int column = (i - offset) % columns;
+      int row = (i - offset) / columns;
+
+      int x = column * frameWidth
+        + options.BorderPadding
+        + options.Spacing * column
+        + options.InnerPadding * (column + column + 1);
+
+      int y = row * frameHeight
+        + options.BorderPadding
+        + options.Spacing * row
+        + options.InnerPadding * (row + row + 1);
+
+      Rectangle bounds = new(x, y, frameWidth, frameHeight);
+      regions[frame.FrameIndex] = bounds;
+      originalToDuplicateLookup.Add(i, bounds);
+
+      if (frame.IsEmpty) {
+        continue;
+      }
+
+      // Write the color data
+      if (upscale) {
+        WriteScaledPixels(imagePixels, atlasWidth, frame.ColorData, x, y, frameWidth);
+      }
+      else {
+        WritePixels(imagePixels, atlasWidth, frame.ColorData, x, y, frameWidth);
+      }
+    }
+
+    var textureAsset = AseReader.CreateTexture2DAsset(name, atlasWidth, atlasHeight, imagePixels);
+
+    ArrayPool<Rgba32>.Shared.Return(imagePixelArray, true);
+    return new TextureAtlas(regions, textureAsset);
   }
 
   private static Dictionary<int, int> GetDuplicateMap(ReadOnlySpan<FrameEntry> layerFrames) {
@@ -274,7 +309,7 @@ public static class AnimTextureAtlasProcessor {
   private static bool IsDuplicate(FrameEntry firstFrame, FrameEntry secondFrame) {
     // Only compare to non-empty candidates that originate from the original layer and are not itself
     if (secondFrame.IsEmpty ||
-        secondFrame.RootLayerIndex != firstFrame.RootLayerIndex ||
+        secondFrame.TargetLayerIndex != firstFrame.TargetLayerIndex ||
         secondFrame.FrameIndex == firstFrame.FrameIndex) {
       return false;
     }
@@ -300,7 +335,7 @@ public static class AnimTextureAtlasProcessor {
     return firstData.SequenceEqual(secondData, null);
   }
 
-  private static void WritePixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w) {
+  private static void WritePixels(Span<Rgba32> imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w) {
     int length = pixels.Length;
     for (int p = 0; p < length; p++) {
       int px = x + p % w;
@@ -310,7 +345,7 @@ public static class AnimTextureAtlasProcessor {
     }
   }
 
-  private static void WriteScaledPixels(Rgba32[] imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w) {
+  private static void WriteScaledPixels(Span<Rgba32> imagePixels, int imageWidth, Rgba32[] pixels, int x, int y, int w) {
     int length = pixels.Length;
     for (int p = 0; p < length; p++) {
       int p2 = p * 2;
@@ -332,7 +367,7 @@ internal record LayerEntry(string Name, FrameEntry[] Frames);
 
 internal readonly record struct FrameEntry(
   int FrameIndex,
-  int RootLayerIndex,
+  int TargetLayerIndex,
   Rgba32[]? ColorData) {
   [MemberNotNullWhen(false, nameof(ColorData))]
   public bool IsEmpty => ColorData is null;

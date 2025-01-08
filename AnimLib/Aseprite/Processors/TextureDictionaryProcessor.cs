@@ -1,5 +1,5 @@
-﻿using AsepriteDotNet.Aseprite;
-using AsepriteDotNet.Processors;
+﻿using AnimLib.Animations;
+using AsepriteDotNet.Aseprite;
 
 namespace AnimLib.Aseprite.Processors;
 
@@ -8,20 +8,19 @@ namespace AnimLib.Aseprite.Processors;
 /// where the key is the name of the layer,
 /// and the value is the layer processed to a <see cref="Texture2D"/> Asset.
 /// </summary>
-public class TextureDictionaryProcessor : IAsepriteProcessor<Dictionary<string, Asset<Texture2D>>> {
-  public Dictionary<string, Asset<Texture2D>> Process(AsepriteFile file, ProcessorOptions? options = null) {
-    options ??= ProcessorOptions.Default with {
-      OnlyVisibleLayers = false,
-      IncludeBackgroundLayer = true
-    };
-
+public class TextureDictionaryProcessor : IAsepriteProcessor<TextureDictionary>, IAsepriteProcessor<Dictionary<string, Asset<Texture2D>>> {
+  public TextureDictionary Process(AsepriteFile file, AnimProcessorOptions options) {
     var textureAtlases = AnimTextureAtlasProcessor.Process(file, options);
 
-    var result = new Dictionary<string, Asset<Texture2D>>();
-    foreach ((string key, AnimTextureAtlas value) in textureAtlases) {
+    TextureDictionary result = new();
+    foreach ((string key, TextureAtlas value) in textureAtlases) {
       result.Add(key, value.TextureAsset);
     }
 
     return result;
+  }
+
+  Dictionary<string, Asset<Texture2D>> IAsepriteProcessor<Dictionary<string, Asset<Texture2D>>>.Process(AsepriteFile file, AnimProcessorOptions options) {
+    return Process(file, options);
   }
 }

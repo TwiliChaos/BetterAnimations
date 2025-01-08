@@ -7,7 +7,7 @@ using Point = AsepriteDotNet.Common.Point;
 namespace AnimLib.Aseprite.Processors;
 
 /// <summary>
-/// Defines a processor for processing an <see cref="AnimLibMod"/> <see cref="AnimSpriteSheet"/> from an <see cref="AsepriteFile"/>.
+/// Defines a processor for processing an <see cref="AnimLibMod"/> <see cref="AsepriteFile"/> from an <see cref="AnimSpriteSheet"/>.
 /// </summary>
 public class AnimSpriteSheetProcessor : IAsepriteProcessor<AnimSpriteSheet> {
   /// <summary>
@@ -17,15 +17,14 @@ public class AnimSpriteSheetProcessor : IAsepriteProcessor<AnimSpriteSheet> {
   /// <param name="options">Optional <see cref="ProcessorOptions"/> used in processing the <see cref="AsepriteFile"/>.</param>
   /// <returns></returns>
   /// <exception cref="InvalidOperationException"></exception>
-  public AnimSpriteSheet Process(AsepriteFile file, ProcessorOptions? options = null) {
+  public AnimSpriteSheet Process(AsepriteFile file, AnimProcessorOptions options) {
     ArgumentNullException.ThrowIfNull(file, nameof(file));
-    options ??= ProcessorOptions.Default;
 
     var tags = GetTags(file);
 
     var textureAtlases = AnimTextureAtlasProcessor.Process(file, options);
 
-    var pointDict = ProcessPoints(file);
+    var pointDict = ProcessPoints(file, options);
 
     return new AnimSpriteSheet(textureAtlases, tags, pointDict);
   }
@@ -55,14 +54,14 @@ public class AnimSpriteSheetProcessor : IAsepriteProcessor<AnimSpriteSheet> {
     return tags;
   }
 
-  private static Dictionary<string, Vector2[]> ProcessPoints(AsepriteFile file) {
+  private static Dictionary<string, Vector2[]> ProcessPoints(AsepriteFile file, AnimProcessorOptions options) {
     Dictionary<string, Vector2[]> result = [];
 
-    float scale = file.UserData.HasText && file.UserData.Text.Contains("upscale") ? 2 : 1;
+    float scale = options.Upscale ? 2 : 1;
     Vector2 center = new Vector2(file.CanvasWidth, file.CanvasHeight) * scale / 2;
 
     foreach (AsepriteLayer layer in file.Layers) {
-      if (layer is { ChildLevel: 0, UserData.HasColor: true } && layer.UserData.Color == UserDataColors.Yellow) {
+      if (layer is { ChildLevel: 0, UserData: { HasColor: true, Color.PackedValue: Colors.Yellow } }) {
         var array = new Vector2[file.FrameCount];
         Array.Fill(array, center);
         result.Add(layer.Name, array);
