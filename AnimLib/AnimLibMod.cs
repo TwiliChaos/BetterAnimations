@@ -1,6 +1,5 @@
 using System.IO;
 using AnimLib.Networking;
-using AnimLib.UI.Debug;
 using JetBrains.Annotations;
 using Terraria.ID;
 
@@ -46,6 +45,5 @@ public sealed partial class AnimLibMod : Mod {
 
   internal static void ToggleDebugMode() {
     DebugEnabled ^= true;
-    ModContent.GetInstance<DebugUISystem>().SetUIVisibility(DebugEnabled);
   }
 }
