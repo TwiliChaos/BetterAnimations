@@ -3,30 +3,28 @@ using JetBrains.Annotations;
 using Terraria.ID;
 using Terraria.Localization;
 
-namespace AnimLib;
+namespace AnimLib.Systems;
 
 [UsedImplicitly]
 internal sealed class SyncOnConnect : ModSystem {
   public override bool HijackSendData(int whoAmI, int msgType, int remoteClient, int ignoreClient, NetworkText text,
     int number, float number2, float number3, float number4, int number5, int number6, int number7) {
-    SendSyncStates(msgType, remoteClient);
+    if (msgType == MessageID.FinishedConnectingToServer && Main.netMode == NetmodeID.Server) {
+      SendSyncStates(remoteClient);
+    }
+
     return false;
   }
 
-  private static void SendSyncStates(int msgType, int remoteClient) {
-    if (msgType != MessageID.FinishedConnectingToServer || Main.netMode != NetmodeID.Server) {
-      return;
-    }
-
+  private static void SendSyncStates(int remoteClient) {
     ModNetHandler netHandler = ModContent.GetInstance<ModNetHandler>();
-
-    netHandler.StateIDsHandler.SendPacket(remoteClient, Main.myPlayer);
+    FullSyncPacketHandler fullSyncHandler = netHandler.FullSyncHandler;
 
     foreach (Player pl in Main.ActivePlayers) {
       int fromPlayer = pl.whoAmI;
       if (remoteClient != fromPlayer) {
-        // A player just connected to the world, let them know the State data of other players.
-        netHandler.FullSyncHandler.SendPacket(remoteClient, fromPlayer);
+        // Let the newly-connected client know the full State data of other players.
+        fullSyncHandler.SendPacket(remoteClient, fromPlayer);
       }
     }
   }
