@@ -1,8 +1,11 @@
+using System.Diagnostics;
+
 namespace AnimLib.Animations;
 
 /// <summary>
 /// Represents one frame of animation as defined in the Aseprite file.
 /// </summary>
+[DebuggerDisplay("FrameIndex = {AtlasFrameIndex}, Duration = {Duration}")]
 public readonly record struct AnimFrame(int AtlasFrameIndex, float Duration) {
   /// <summary>
   /// Index of the frame, as defined in the Aseprite file.

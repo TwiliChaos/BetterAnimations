@@ -1,4 +1,4 @@
-using AnimLib.Animations;
+﻿using AnimLib.Animations;
 using Terraria.DataStructures;
 
 namespace AnimLib.States;
@@ -66,14 +66,13 @@ public abstract class AnimatedStateMachine : StateMachine {
   /// <param name="drawInfo">Parameter of <see cref="PlayerDrawLayer.Draw">PlayerDrawLayer.Draw</see></param>
   /// <param name="layer">The texture layer to draw.</param>
   /// <returns></returns>
-  public DrawData GetDrawData(PlayerDrawSet drawInfo, string layer) {
+  public DrawData GetDrawData(ref readonly PlayerDrawSet drawInfo, string layer) {
     ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
-    AnimTextureAtlas atlas = SpriteSheet.Atlases[layer];
-    Rectangle sourceRect = atlas.GetRect(CurrentFrame.AtlasFrameIndex);
+    Rectangle sourceRect = GetRect(layer);
 
     return new DrawData {
-      texture = atlas.GetTexture(),
+      texture = GetTexture(layer),
       position = drawInfo.Position - Main.screenPosition + drawInfo.drawPlayer.Size / 2,
       sourceRect = sourceRect,
       color = Color.White,
@@ -102,12 +101,30 @@ public abstract class AnimatedStateMachine : StateMachine {
   /// This returned value will likely differ between <paramref name="layer"/>s,
   /// even if the animation state is identical. Make sure you are also using the correct texture.
   /// </remarks>
-  public Rectangle GetRect(string layer) => SpriteSheet.Atlases[layer].GetRect(CurrentFrame.AtlasFrameIndex);
+  public Rectangle GetRect(string layer) => GetRect(layer, CurrentFrame.AtlasFrameIndex);
+
+  public Rectangle GetRect(string layer, int frameIndex) {
+    if (!SpriteSheet.Atlases.TryGetValue(layer, out TextureAtlas? atlas)) {
+      throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
+    }
+
+    return atlas.GetRect(frameIndex);
+  }
+
+  public Vector2 GetPoint(string layer) => GetPoint(layer, CurrentFrame.AtlasFrameIndex);
+
+  public Vector2 GetPoint(string layer, int frameIndex) {
+    if (!SpriteSheet.Points.TryGetValue(layer, out var points)) {
+      throw new ArgumentException($"Layer \"{layer}\" is not a valid Points layer.");
+    }
+
+    return points[frameIndex];
+  }
 
   public void SetLayer(ref DrawData data, string layer) {
     ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
-    if (!SpriteSheet.Atlases.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
+    if (!SpriteSheet.Atlases.TryGetValue(layer, out TextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
@@ -130,7 +147,7 @@ public abstract class AnimatedStateMachine : StateMachine {
   /// Frame in the <see cref="AnimTag"/> to get a source rect with.
   /// </param>
   /// <exception cref="ArgumentException">
-  /// There is no <see cref="AnimTextureAtlas"/> with name <paramref name="layer"/>.
+  /// There is no <see cref="TextureAtlas"/> with name <paramref name="layer"/>.
   /// There is no <see cref="AnimTag"/> with name <paramref name="tagName"/>.
   /// </exception>
   /// <exception cref="ArgumentNullException">
@@ -139,11 +156,11 @@ public abstract class AnimatedStateMachine : StateMachine {
   /// <exception cref="ArgumentOutOfRangeException">
   /// <paramref name="frameIndex"/> is less than 0, or greater than number of frames in tag with name <paramref name="tagName"/>.
   /// </exception>
-  public void SetLayer(ref DrawData data, string layer, string tagName, int frameIndex) {
+  public void SetLayerAndFrame(ref DrawData data, string layer, string tagName, int frameIndex) {
     ArgumentException.ThrowIfNullOrWhiteSpace(layer);
     ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
 
-    if (!SpriteSheet.Atlases.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
+    if (!SpriteSheet.Atlases.TryGetValue(layer, out TextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
@@ -158,9 +175,61 @@ public abstract class AnimatedStateMachine : StateMachine {
     SetLayer(ref data, atlas, tagFrames[frameIndex]);
   }
 
-  private static void SetLayer(ref DrawData data, AnimTextureAtlas atlas, AnimFrame frame) {
+  private static void SetLayer(ref DrawData data, TextureAtlas atlas, AnimFrame frame) {
     data.texture = atlas.GetTexture();
     data.sourceRect = atlas.GetRect(frame.AtlasFrameIndex);
+  }
+
+  public void UIAnimation(AnimationOptions options, AnimCharacter character, bool ignoreCategory = true) {
+    int counter = ignoreCategory ? character.UIAnimationCounter : character.UICategoryAnimationCounter;
+    options.FrameIndex ??= SpriteSheet.FrameFromTimer(options, counter);
+    UpdateAnimation(options);
+  }
+
+  /// <summary>
+  /// For use in UI, this will play an animation sequence based on the <paramref name="character"/>'s UI properties.
+  /// The counter for all tags will be <see cref="AnimCharacter.UICategoryAnimationCounter"/>.
+  /// </summary>
+  /// <param name="tagOptions">
+  /// The sequence of tags to play.
+  /// </param>
+  /// <param name="character">
+  /// The character whose UI values will be used for the counter.
+  /// </param>
+  /// <param name="syncLastTag">
+  /// If <see langword="true"/>, the last tag in <paramref name="tagOptions"/> will instead be played
+  /// with the counter <see cref="AnimCharacter.UIAnimationCounter"/>.
+  /// </param>
+  public void UIAnimationSequence(ReadOnlySpan<AnimationOptions> tagOptions, AnimCharacter character,
+    bool syncLastTag) {
+    (AnimTag tag, int frame) =
+      SpriteSheet.FrameFromTimerSequence(tagOptions, character.UICategoryAnimationCounter, loop: false);
+    if (syncLastTag && tag.Name == tagOptions[^1].TagName) {
+      (tag, frame) = SpriteSheet.FrameFromTimerSequence(tagOptions, character.UIAnimationCounter, loop: false);
+    }
+
+    UpdateAnimation(new AnimationOptions(tag.Name, frame));
+  }
+
+  /// <summary>
+  /// For use in UI, this will play a looping animation sequence based on the <paramref name="character"/>'s UI properties.
+  /// The counter for all tags will be <see cref="AnimCharacter.UICategoryAnimationCounter"/>.
+  /// </summary>
+  /// <param name="tagOptions">
+  /// The sequence of tags to play.
+  /// </param>
+  /// <param name="character">
+  /// The character whose UI values will be used for the counter.
+  /// </param>
+  /// <param name="ignoreCategory">
+  /// Whether to sync this sequence with
+  /// <see cref="AnimCharacter.UIAnimationCounter"/> (if <see langword="true"/>), or with
+  /// <see cref="AnimCharacter.UICategoryAnimationCounter"/> (if <see langword="false"/>).
+  /// </param>
+  public void UILoopedAnimationSequence(ReadOnlySpan<AnimationOptions> tagOptions, AnimCharacter character, bool ignoreCategory) {
+    int counter = ignoreCategory ? character.UIAnimationCounter : character.UICategoryAnimationCounter;
+    (AnimTag tag, int frame) = SpriteSheet.FrameFromTimerSequence(tagOptions, counter);
+    UpdateAnimation(new AnimationOptions(tag.Name, frame));
   }
 
   /// <summary>

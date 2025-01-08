@@ -6,11 +6,12 @@ namespace AnimLib.Animations;
 [PublicAPI]
 public record AnimSpriteSheet {
   private readonly AnimTag[] _tags;
-  private readonly ReadOnlyDictionary<string, AnimTextureAtlas> _atlases;
+  private readonly ReadOnlyDictionary<string, TextureAtlas> _atlases;
   private readonly ReadOnlyDictionary<string, AnimTag> _tagDictionary;
   private readonly ReadOnlyDictionary<string, Vector2[]> _points;
 
-  public AnimSpriteSheet(Dictionary<string, AnimTextureAtlas> atlases, AnimTag[] tags, Dictionary<string, Vector2[]> points) {
+  public AnimSpriteSheet(Dictionary<string, TextureAtlas> atlases, AnimTag[] tags,
+    Dictionary<string, Vector2[]> points) {
     _tags = tags;
     _atlases = atlases.AsReadOnly();
     _points = points.AsReadOnly();
@@ -35,12 +36,12 @@ public record AnimSpriteSheet {
   public IReadOnlyDictionary<string, AnimTag> TagDictionary => _tagDictionary;
 
   /// <summary>
-  /// Represents pairs of root layer names and the texture atlas generated from the layer.
+  /// Represents pairs of imported layer names and the texture atlas generated from the layer.
   /// </summary>
-  public IReadOnlyDictionary<string, AnimTextureAtlas> Atlases => _atlases;
+  public IReadOnlyDictionary<string, TextureAtlas> Atlases => _atlases;
 
   /// <summary>
-  /// Represents pairs of Yellow root layer names, and the single pixel position on each frame.
+  /// Represents pairs of Yellow layer names, and the single pixel position on each frame.
   /// If a frame was missing a pixel, the value will be the center of the sprite.
   /// </summary>
   public IReadOnlyDictionary<string, Vector2[]> Points => _points;
@@ -53,7 +54,7 @@ public record AnimSpriteSheet {
       throw new ArgumentException($"Animation with name \"{animation}\" does not exist.", nameof(animation));
     }
 
-    if (!Atlases.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
+    if (!Atlases.TryGetValue(layer, out TextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
@@ -77,43 +78,147 @@ public record AnimSpriteSheet {
   public Rectangle GetAtlasRect(string layer, int index) {
     ArgumentException.ThrowIfNullOrEmpty(layer);
 
-    if (!Atlases.TryGetValue(layer, out AnimTextureAtlas? atlas)) {
+    if (!Atlases.TryGetValue(layer, out TextureAtlas? atlas)) {
       throw new ArgumentException($"Atlas with name \"{layer}\" does not exist.");
     }
 
     return atlas.GetRect(index);
   }
 
-  public Rectangle GetRectFromTimer(string animation, string layer, int duration) {
-    ArgumentException.ThrowIfNullOrWhiteSpace(animation);
+  public Rectangle GetRectFromTimer(AnimationOptions animation, string layer, int ticks, bool loop = true) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(animation.TagName);
     ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
-    return GetRectFromTimer(animation, layer, duration / 60f);
+    int frame = FrameFromTimer(animation, ticks / 60f, loop);
+    return GetAnimationRect(animation.TagName, layer, frame);
   }
 
-  public Rectangle GetRectFromTimer(string animation, string layer, float durationSeconds) {
-    ArgumentException.ThrowIfNullOrWhiteSpace(animation);
+  public Rectangle GetRectFromTimer(AnimationOptions animation, string layer, float seconds, bool loop = true) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(animation.TagName);
     ArgumentException.ThrowIfNullOrWhiteSpace(layer);
 
-    if (!TagDictionary.TryGetValue(animation, out AnimTag? tag)) {
+    int frame = FrameFromTimer(animation, seconds, loop);
+    return GetAnimationRect(animation.TagName, layer, frame);
+  }
+
+  public int FrameFromTimer(AnimationOptions animation, int ticks, bool loop = true) {
+    return FrameFromTimer(animation, ticks / 60f, loop);
+  }
+
+  public int FrameFromTimer(AnimationOptions animation, float seconds, bool loop = true) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(animation.TagName);
+
+    if (!TagDictionary.TryGetValue(animation.TagName, out AnimTag? tag)) {
       throw new ArgumentException($"Animation with name \"{animation}\" does not exist.", nameof(animation));
     }
 
-    // TODO: Something not strictly linear
-    // This works for basic vfx that uses this AnimSpriteSheet to load with.
-    int frameIndex = 0;
-    var frames = GetAnimationFrames(animation, layer);
-    var tagFrames = tag.Frames;
-    while (true) {
-      float frameDuration = tagFrames[frameIndex].Duration;
-      if (durationSeconds > frameDuration && frameIndex < tagFrames.Length - 1) {
-        durationSeconds -= frameDuration;
-        frameIndex++;
-      }
-      else {
-        return frames[frameIndex];
+    var frames = tag.Frames;
+    float totalSeconds = tag.TotalDuration;
+
+    if (!loop && seconds >= totalSeconds) {
+      return frames.Length - 1;
+    }
+
+    float duration = seconds % totalSeconds;
+
+    int frameIndex;
+    if (animation.IsReversed ?? tag.IsReversed) {
+      frameIndex = frames.Length - 1;
+      while (true) {
+        duration -= frames[frameIndex].Duration;
+        if (duration <= 0) {
+          return frameIndex;
+        }
+
+        frameIndex--;
       }
     }
+
+    frameIndex = 0;
+    while (true) {
+      duration -= frames[frameIndex].Duration;
+      if (duration <= 0) {
+        return frameIndex;
+      }
+
+      frameIndex++;
+    }
+  }
+
+  public Rectangle GetRectFromSequence(ReadOnlySpan<AnimationOptions> animations, string layer, int ticks,
+    bool loop = true) {
+    return GetRectFromSequence(animations, layer, ticks / 60f, loop);
+  }
+
+  public Rectangle GetRectFromSequence(ReadOnlySpan<AnimationOptions> animations, string layer, float seconds,
+    bool loop = true) {
+    (AnimTag tag, int frame) = FrameFromTimerSequence(animations, seconds, loop);
+    return GetAnimationRect(tag.Name, layer, frame);
+  }
+
+  public (AnimTag, int) FrameFromTimerSequence(ReadOnlySpan<AnimationOptions> animations, int ticks, bool loop = true) {
+    return FrameFromTimerSequence(animations, ticks / 60f, loop);
+  }
+
+  public (AnimTag, int) FrameFromTimerSequence(ReadOnlySpan<AnimationOptions> animations, float seconds,
+    bool loop = true) {
+    float totalSequenceDuration = 0;
+    AnimTag? tag;
+    bool hasInfLoop = false;
+    foreach (AnimationOptions animation in animations) {
+      if (!TagDictionary.TryGetValue(animation.TagName, out tag)) {
+        throw new ArgumentException($"Animation with name \"{animation}\" does not exist.", nameof(animations));
+      }
+
+      int loopCount = animation.LoopCount ?? tag.LoopCount;
+      float tagDuration = animation.FrameIndex switch {
+        >= 0 => tag.Frames[animation.FrameIndex.Value].Duration,
+        _ => tag.TotalDuration
+      };
+      totalSequenceDuration += tagDuration / animation.Speed * loopCount;
+      if (loopCount == 0) {
+        hasInfLoop = true;
+        loop = false; // Inner infinite animation loop prevents sequence loop
+      }
+    }
+
+    if (!loop && !hasInfLoop && seconds >= totalSequenceDuration) {
+      tag = TagDictionary[animations[^1].TagName];
+      return (tag, tag.Frames.Length - 1);
+    }
+
+    float duration = hasInfLoop ? seconds : seconds % totalSequenceDuration;
+
+    foreach (AnimationOptions animation in animations) {
+      if (!TagDictionary.TryGetValue(animation.TagName, out tag)) {
+        throw new ArgumentException($"Animation with name \"{animation}\" does not exist.", nameof(animations));
+      }
+
+
+      int loopCount = animation.LoopCount ?? tag.LoopCount;
+      float tagDuration = tag.TotalDuration / animation.Speed * loopCount;
+      if (loopCount == 0 || duration <= tagDuration) {
+        if (animation.FrameIndex is { } frameIndex) {
+          return (tag, frameIndex);
+        }
+        return (tag, FrameFromTimer(animation, duration * animation.Speed));
+      }
+
+      duration -= tagDuration;
+    }
+
+    tag = TagDictionary[animations[^1].TagName];
+    return (tag, tag.Frames.Length - 1);
+  }
+
+  public Vector2 GetPoint(string layer, int index) {
+    ArgumentException.ThrowIfNullOrWhiteSpace(layer);
+
+    if (!Points.TryGetValue(layer, out var points)) {
+      throw new ArgumentException($"Layer with name \"{layer}\" does not exist.");
+    }
+
+    return points[index];
   }
 
 
@@ -131,7 +236,7 @@ public record AnimSpriteSheet {
   }
 
   public void Deconstruct(
-    out ReadOnlyDictionary<string, AnimTextureAtlas> atlases,
+    out ReadOnlyDictionary<string, TextureAtlas> atlases,
     out ReadOnlySpan<AnimTag> tags,
     out ReadOnlyDictionary<string, Vector2[]> points) {
     atlases = _atlases;
