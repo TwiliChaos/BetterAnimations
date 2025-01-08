@@ -1,7 +1,7 @@
 ﻿using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Processors;
 
-namespace AnimLib.Animations.Aseprite.Processors;
+namespace AnimLib.Aseprite.Processors;
 
 /// <summary>
 /// Use <see cref="IAsepriteProcessor{T}"/>

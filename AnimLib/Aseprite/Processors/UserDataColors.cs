@@ -1,6 +1,6 @@
 using AsepriteDotNet.Common;
 
-namespace AnimLib.Animations.Aseprite.Processors;
+namespace AnimLib.Aseprite.Processors;
 
 internal static class UserDataColors {
   /// <summary>

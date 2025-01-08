@@ -8,8 +8,8 @@ namespace AnimLib.Animations;
 /// each frame of animation on this <see cref="Texture"/>.
 /// </summary>
 [PublicAPI]
-public record AnimTextureAtlas {
-  public AnimTextureAtlas(Rectangle[] regions, Asset<Texture2D> textureAsset) {
+public record TextureAtlas {
+  public TextureAtlas(Rectangle[] regions, Asset<Texture2D> textureAsset) {
     ArgumentNullException.ThrowIfNull(regions);
     ArgumentNullException.ThrowIfNull(textureAsset);
 

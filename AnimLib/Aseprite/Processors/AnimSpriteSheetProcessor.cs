@@ -1,9 +1,10 @@
+using AnimLib.Animations;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Processors;
 using Point = AsepriteDotNet.Common.Point;
 
-namespace AnimLib.Animations.Aseprite.Processors;
+namespace AnimLib.Aseprite.Processors;
 
 /// <summary>
 /// Defines a processor for processing an <see cref="AnimLibMod"/> <see cref="AnimSpriteSheet"/> from an <see cref="AsepriteFile"/>.

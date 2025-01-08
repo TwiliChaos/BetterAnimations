@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using AsepriteDotNet;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Aseprite.Types;
 using AsepriteDotNet.Common;
@@ -7,10 +6,10 @@ using AsepriteDotNet.Processors;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 using Texture = AsepriteDotNet.Texture;
 
-namespace AnimLib.Animations.Aseprite.Processors;
+namespace AnimLib.Aseprite.Processors;
 
 /// <summary>
-/// Defines a processor for processing multiple <see cref="TextureAtlas"/>es from an <see cref="AsepriteFile"/>,
+/// Defines a processor for processing multiple <see cref="Animations.TextureAtlas"/>es from an <see cref="AsepriteFile"/>,
 /// each corresponding to a root-level layer.
 ///
 /// Creates a Dictionary where each entry key is the root-level layer name, and the value is an atlas that represents either
@@ -19,7 +18,7 @@ namespace AnimLib.Animations.Aseprite.Processors;
 /// </summary>
 public static class AnimTextureAtlasProcessor {
   /// <summary>
-  /// Processes multiple <see cref="TextureAtlas"/>s from an <see cref="AsepriteFile"/>.
+  /// Processes multiple <see cref="Animations.TextureAtlas"/>s from an <see cref="AsepriteFile"/>.
   /// </summary>
   /// <param name="file">The <see cref="AsepriteFile"/> to process.</param>
   /// <param name="options">

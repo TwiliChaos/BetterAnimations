@@ -4,7 +4,7 @@ using AsepriteDotNet.Common;
 using AsepriteDotNet.Processors;
 using Rectangle = AsepriteDotNet.Common.Rectangle;
 
-namespace AnimLib.Animations.Aseprite.Processors;
+namespace AnimLib.Aseprite.Processors;
 
 public static class ProcessorHelper {
   // This is an non-nullable array where each element represents a root layer at the specified frame.

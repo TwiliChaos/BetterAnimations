@@ -1,8 +1,8 @@
-﻿using AsepriteDotNet;
-using AsepriteDotNet.Aseprite;
+﻿using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.Processors;
+using TextureAtlas = AnimLib.Animations.TextureAtlas;
 
-namespace AnimLib.Animations.Aseprite.Processors;
+namespace AnimLib.Aseprite.Processors;
 
 /// <summary>
 /// Basic processor to process an <see cref="AsepriteFile"/> into a <see cref="Texture2D"/>.

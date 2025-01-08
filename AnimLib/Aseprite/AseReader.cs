@@ -1,11 +1,12 @@
 using System.IO;
-using AnimLib.Animations.Aseprite.Processors;
+using AnimLib.Animations;
+using AnimLib.Aseprite.Processors;
 using AsepriteDotNet.Aseprite;
 using AsepriteDotNet.IO;
 using JetBrains.Annotations;
 using ReLogic.Content.Readers;
 
-namespace AnimLib.Animations.Aseprite;
+namespace AnimLib.Aseprite;
 
 /// <summary>
 /// AssetReader to read an Aseprite file (*.ase/*.aseprite) into a format usable by Terraria.
